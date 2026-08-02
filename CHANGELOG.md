@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1] - 2026-08-02
+
+### Added
+
+- `ai init` for bootstrapping a minimal `.ai` workspace.
+- Actionable guidance when `ai sync` runs before initialization.
+
 ## [0.1.0] - 2026-08-02
 
 ### Added

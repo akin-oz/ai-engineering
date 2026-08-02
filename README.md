@@ -12,9 +12,12 @@ Install the compiler in a repository that contains `.ai/`:
 
 ```sh
 npm install --save-dev @akinlabs/ai-engineering
+npx ai init
+npx ai sync
 ```
 
-Compile enabled runtimes:
+`ai init` creates a minimal `.ai/` workspace and never overwrites existing
+files. Add project intent, then compile enabled runtimes:
 
 ```sh
 npx ai sync

@@ -17,7 +17,13 @@ export async function loadManifest(root = process.cwd()) {
   try {
     source = await fs.readFile(file, "utf8");
   } catch {
-    fail("Manifest not found", { file: path.relative(projectRoot, file) });
+    fail(`No AI workspace found.
+
+Run:
+
+    ai init
+
+to initialize this repository.`);
   }
 
   let raw;
@@ -30,7 +36,7 @@ export async function loadManifest(root = process.cwd()) {
     });
   }
 
-  validateManifest(raw, file);
+  const version = validateManifest(raw, file);
 
   const targets = normalizeTargets(raw.targets ?? {}, projectRoot);
   const files = createFileMap(projectRoot, sourceRoot, targets);
@@ -41,7 +47,7 @@ export async function loadManifest(root = process.cwd()) {
   await validateSourceEntries(files.rules, rules, "rule", projectRoot);
 
   return deepFreeze({
-    version: raw.version,
+    version,
     root: projectRoot,
     sourceRoot,
     targets,
@@ -61,8 +67,10 @@ function validateManifest(value, file) {
     fail("Manifest must contain a YAML object", { file });
   }
 
-  if (value.version !== MANIFEST_VERSION) {
-    fail(`Unsupported manifest version: ${value.version}`, { file });
+  const version = value.version ?? value.schema;
+
+  if (version !== MANIFEST_VERSION) {
+    fail(`Unsupported manifest version: ${version}`, { file });
   }
 
   if (value.targets !== undefined && !isObject(value.targets)) {
@@ -86,6 +94,8 @@ function validateManifest(value, file) {
       fail(`Target "${id}" output must be a string`, { file });
     }
   }
+
+  return version;
 }
 
 function normalizeTargets(targets, root) {
