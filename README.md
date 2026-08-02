@@ -11,7 +11,7 @@ The `.ai/` directory is the source of truth. Generated directories such as
 Install the compiler in a repository that contains `.ai/`:
 
 ```sh
-npm install --save-dev @akin/ai-engineering
+npm install --save-dev @akinlabs/ai-engineering
 ```
 
 Compile enabled runtimes:

@@ -9,7 +9,7 @@ import {
   loadManifest,
   validate,
   validateAdapterRegistry,
-} from "@akin/ai-engineering";
+} from "@akinlabs/ai-engineering";
 ```
 
 ## `loadManifest(root = process.cwd())`

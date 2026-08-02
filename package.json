@@ -1,5 +1,5 @@
 {
-  "name": "@akin/ai-engineering",
+  "name": "@akinlabs/ai-engineering",
   "version": "0.1.0",
   "description": "Compile tool-agnostic .ai workspaces into AI coding assistant runtimes.",
   "keywords": [
@@ -27,7 +27,7 @@
   },
   "type": "module",
   "bin": {
-    "ai": "./bin/ai.mjs"
+    "ai": "bin/ai.mjs"
   },
   "exports": {
     ".": "./src/index.mjs"

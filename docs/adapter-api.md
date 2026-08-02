@@ -33,7 +33,7 @@ External consumers can provide a validated adapter array to:
 import {
   compile,
   validateAdapterRegistry,
-} from "@akin/ai-engineering";
+} from "@akinlabs/ai-engineering";
 
 const registry = validateAdapterRegistry([adapter]);
 await compile({ root: process.cwd(), registry });

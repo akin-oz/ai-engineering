@@ -19,6 +19,6 @@ test("public package entry point exposes the documented API", async () => {
   const packageFile = path.join(process.cwd(), "package.json");
   const packageJson = JSON.parse(await fs.readFile(packageFile, "utf8"));
 
-  assert.equal(packageJson.name, "@akin/ai-engineering");
+  assert.equal(packageJson.name, "@akinlabs/ai-engineering");
   assert.equal(packageJson.bin.ai, "./bin/ai.mjs");
 });

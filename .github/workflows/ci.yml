@@ -58,4 +58,4 @@ jobs:
       - name: Verify packed API
         run: |
           cd "$RUNNER_TEMP/package-smoke"
-          node --input-type=module -e 'const api = await import("@akin/ai-engineering"); for (const name of ["compile", "validate", "loadManifest", "createAdapterRegistry", "validateAdapterRegistry"]) if (typeof api[name] !== "function") process.exit(1);'
+          node --input-type=module -e 'const api = await import("@akinlabs/ai-engineering"); for (const name of ["compile", "validate", "loadManifest", "createAdapterRegistry", "validateAdapterRegistry"]) if (typeof api[name] !== "function") process.exit(1);'
