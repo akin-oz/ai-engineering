@@ -1,0 +1,16 @@
+version: 1
+
+targets:
+  claude:
+    enabled: true
+
+  codex:
+    enabled: true
+
+agents:
+  - principal-architect
+  - security
+
+rules:
+  - engineering
+  - testing

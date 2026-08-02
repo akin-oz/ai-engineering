@@ -1,0 +1,55 @@
+{
+  "name": "@akin/ai-engineering",
+  "version": "0.1.0",
+  "description": "Compile tool-agnostic .ai workspaces into AI coding assistant runtimes.",
+  "keywords": [
+    "ai",
+    "ai-engineering",
+    "ai-coding",
+    "claude-code",
+    "codex",
+    "developer-tools",
+    "compiler"
+  ],
+  "homepage": "https://github.com/akin-oz/ai-engineering#readme",
+  "bugs": {
+    "url": "https://github.com/akin-oz/ai-engineering/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akin-oz/ai-engineering.git"
+  },
+  "author": "Akin Oztorun",
+  "license": "MIT",
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/akin-oz"
+  },
+  "type": "module",
+  "bin": {
+    "ai": "./bin/ai.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "docs",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "node --check bin/ai.mjs && node --check src/index.mjs && node --check src/cli/run.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  }
+}

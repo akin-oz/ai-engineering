@@ -1,0 +1,14 @@
+version: 1
+
+targets:
+  claude:
+    enabled: true
+
+  codex:
+    enabled: true
+
+agents:
+  - reviewer
+
+rules:
+  - concise
