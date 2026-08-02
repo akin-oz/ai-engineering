@@ -24,6 +24,18 @@ project root
 The manifest is loaded once and passed to adapters. Adapters do not mutate it.
 The compiler does not inspect adapter output formats.
 
+The next architectural layer is the workflow compiler. A schema 2 blueprint is
+resolved into a normalized workflow graph and materialized source artifacts
+before this adapter pipeline runs. Schema 1 manifests continue to bypass that
+phase, preserving the current contract. See the [workflow compiler design](workflow-compiler.md)
+for the composition model and migration roadmap.
+
+Adapters own the complete installation surface of each enabled runtime, not
+only a runtime directory. This includes root-level instruction files such as
+`CLAUDE.md` or `AGENTS.md`, hooks, metadata, and future runtime assets. The
+compiler coordinates path ownership and atomic rendering but does not know
+which artifacts a runtime requires. See the [runtime parity plan](runtime-parity.md).
+
 ## Adapter contract
 
 An adapter is a small module with two exports:
@@ -69,6 +81,8 @@ It should not be embedded in individual adapters prematurely.
 - Monorepos: make `loadManifest` operate on a discovered workspace root and
   compile each project as an explicit unit.
 - Incremental sync: cache normalized inputs and adapter output fingerprints.
+- Workflow capabilities: compose reusable development, review, documentation,
+  and release packs into a runtime-neutral graph before adapter rendering.
 
 These are intentionally not implemented in v1. The current interfaces leave
 those responsibilities outside the filesystem and adapter implementations.

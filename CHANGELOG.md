@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2] - 2026-08-02
+
+### Added
+
+- Workflow compiler architecture for declarative, reusable engineering workflows.
+- Runtime parity contract for complete adapter-owned installations.
+- Implementation plan for root-level runtime files, hooks, metadata, and artifact ownership.
+
 ## [0.1.1] - 2026-08-02
 
 ### Added

@@ -8,8 +8,10 @@
 [![Node.js](https://img.shields.io/node/v/%40akinlabs%2Fai-engineering)](https://www.npmjs.com/package/@akinlabs/ai-engineering)
 [![License](https://img.shields.io/github/license/akin-oz/ai-engineering)](LICENSE)
 
-AI Engineering OS turns a repository's tool-agnostic .ai/ workspace into
-runtime-specific artifacts. The current release supports Claude Code and Codex.
+AI Engineering OS turns a declarative engineering workflow into a reviewable
+tool-agnostic .ai/ workspace and runtime-specific artifacts. The current
+release supports Claude Code and Codex; workflow compilation is the next
+evolution of the architecture.
 
 ## The problem
 
@@ -159,6 +161,12 @@ runtime-specific rendering. See the detailed [architecture
 documentation](docs/architecture.md) and [adapter contract](docs/adapter-api.md).
 
 The public JavaScript API is documented in [docs/api.md](docs/api.md).
+
+The planned workflow compiler lets a blueprint select reusable development,
+testing, review, release, and documentation capabilities, then generates the
+agents, rules, templates, prompts, and conventions consumed by runtime
+adapters. Read the [workflow compiler architecture](docs/workflow-compiler.md)
+for the schema and incremental migration roadmap.
 
 ## Roadmap
 

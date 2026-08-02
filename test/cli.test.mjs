@@ -25,7 +25,7 @@ test("CLI prints help and version", () => {
   assert.match(help.stdout, /ai init/);
   assert.match(help.stdout, /ai sync/);
   assert.equal(version.status, 0);
-  assert.match(version.stdout, /^0\.1\.1\n$/);
+  assert.match(version.stdout, /^0\.1\.2\n$/);
 });
 
 test("CLI guides users when sync runs without a workspace", async () => {
