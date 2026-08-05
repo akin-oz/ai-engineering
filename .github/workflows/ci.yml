@@ -26,10 +26,54 @@ jobs:
       - run: npm test
       - run: npm run check
       - run: npm pack --dry-run
-      - run: npx --no-install ai validate
-      - run: npx --no-install ai sync
-      - run: git diff --exit-code
-      - run: test -z "$(git status --porcelain)"
+
+  dogfood:
+    name: Dogfood and examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+
+      - name: The workspace this repository ships must be valid
+        run: node bin/aie.mjs validate --strict
+
+      - name: Committed artifacts must match their source
+        uses: ./
+
+      - name: Every example must compile without drift
+        run: |
+          for example in examples/*/; do
+            [ -d "$example/.ai" ] || continue
+            echo "::group::$example"
+            (cd "$example" && node ../../bin/aie.mjs check)
+            echo "::endgroup::"
+          done
+
+      - name: The adoption walkthrough must still work
+        run: |
+          workspace="$RUNNER_TEMP/adopt"
+          cp -r examples/adopt-existing "$workspace"
+          (cd "$workspace" && node "$GITHUB_WORKSPACE/bin/aie.mjs" adopt --write)
+          (cd "$workspace" && node "$GITHUB_WORKSPACE/bin/aie.mjs" validate --strict)
+          test -z "$(git status --porcelain examples/adopt-existing)"
+
+      - name: Sources must compile to real content
+        run: node scripts/verify-dogfood.mjs . examples/basic examples/typescript-library
+
+      - name: Nothing may be left uncommitted
+        run: |
+          node bin/aie.mjs sync
+          for example in examples/*/; do
+            [ -d "$example/.ai" ] || continue
+            (cd "$example" && node ../../bin/aie.mjs sync)
+          done
+          git diff --exit-code
+          test -z "$(git status --porcelain)"
 
   package-smoke:
     name: Packed package smoke test
@@ -53,9 +97,20 @@ jobs:
       - name: Verify packed CLI
         run: |
           cd "$RUNNER_TEMP/package-smoke"
+          npx aie --version
+          npx aie --help
           npx ai --version
-          npx ai --help
+      - name: A packed install must produce a usable installation
+        run: |
+          cd "$RUNNER_TEMP/package-smoke"
+          npx aie init
+          npx aie sync
+          test -s CLAUDE.md
+          test -s AGENTS.md
+          grep -q "Prefer small, reviewable changes" CLAUDE.md
+          grep -q "Prefer small, reviewable changes" AGENTS.md
+          npx aie check
       - name: Verify packed API
         run: |
           cd "$RUNNER_TEMP/package-smoke"
-          node --input-type=module -e 'const api = await import("@akinlabs/ai-engineering"); for (const name of ["compile", "validate", "loadManifest", "createAdapterRegistry", "validateAdapterRegistry"]) if (typeof api[name] !== "function") process.exit(1);'
+          node --input-type=module -e 'const api = await import("@akinlabs/ai-engineering"); for (const name of ["compile", "validate", "plan", "inspect", "loadManifest", "createAdapterRegistry", "validateAdapterRegistry"]) if (typeof api[name] !== "function") process.exit(1);'
