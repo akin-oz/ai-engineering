@@ -9,8 +9,12 @@ targets:
 
 agents:
   - principal-architect
+  - staff-engineer
   - security
 
 rules:
   - engineering
   - testing
+  - docs
+
+commands: []

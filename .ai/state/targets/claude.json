@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "adapter": "claude",
+  "generator": "@akinlabs/ai-engineering",
+  "paths": [
+    ".claude/agents/principal-architect.md",
+    ".claude/agents/security.md",
+    ".claude/agents/staff-engineer.md",
+    "CLAUDE.md"
+  ]
+}
