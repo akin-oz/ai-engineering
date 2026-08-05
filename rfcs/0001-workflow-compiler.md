@@ -1,6 +1,13 @@
-# Workflow compiler architecture
+# RFC 0001: Workflow compiler architecture
 
-AI Engineering OS should evolve from a runtime configuration compiler into a
+- Status: **Accepted, not implemented**
+- Implemented by: [spec 010](../specs/spec-010-workflow-pack-mvp.md) (one pack
+  end to end; the engine phases below stay unbuilt until that pack has users)
+
+> This is design, not documentation. Nothing here describes shipped behavior.
+> For what the tool does today, read [docs/](../docs).
+
+This project should evolve from a runtime configuration compiler into a
 workflow compiler. The important distinction is that a runtime adapter answers
 “where does this instruction go?”, while the workflow compiler answers “what
 engineering system should this repository have?”.

@@ -1,47 +1,91 @@
 # Public API
 
-The package entry point is intentionally small:
-
 ```js
 import {
+  adopt,
   compile,
   createAdapterRegistry,
+  inspect,
+  loadBlueprint,
   loadManifest,
+  loadWorkspace,
+  planAdoption,
+  plan,
   validate,
   validateAdapterRegistry,
+  DiagnosticError,
 } from "@akinlabs/ai-engineering";
 ```
 
-## `loadManifest(root = process.cwd())`
+All functions accept `{ root, manifest, registry, adapterDirectory, strict,
+force }`. `root` defaults to `process.cwd()`.
 
-Loads `.ai/manifest.yaml`, validates referenced source files, normalizes paths,
-and returns a deeply frozen manifest context.
+## `loadWorkspace(root, { diagnostics })`
 
-## `validate(options = {})`
+Loads whichever workspace description exists — `.ai/blueprint.yaml` (schema 2,
+composes a workflow pack) or `.ai/manifest.yaml` (schema 1, lists sources by
+hand) — and returns the same normalized manifest either way. Having both is an
+error.
 
-Loads the manifest and validates the installed adapter registry without writing
-generated artifacts. It returns `{ manifest, registry }`.
+## `loadManifest(root, { diagnostics })`
 
-## `compile(options = {})`
+Loads `.ai/manifest.yaml` specifically. Reads every declared source file and
+returns a deeply frozen manifest. Missing sources throw a `DiagnosticError`
+listing all of them. Empty, unlisted, and unsupported sources are recorded on
+the optional diagnostics collector as warnings.
 
-Validates the workspace and renders every enabled target. It returns:
+The manifest exposes `version`, `root`, `sourceRoot`, `targets`, the declared
+name lists (`agents`, `rules`, `commands`), `sources` (including `hooks`),
+`files`, `generated`, `workflow`, and `resolve`.
+
+## `loadBlueprint(root, { diagnostics })`
+
+Loads `.ai/blueprint.yaml`, resolves its workflow pack, and returns the same
+manifest shape with `generated` populated — the source files the workflow
+materializes into `.ai/generated/`.
+
+## `plan(options)`
+
+Renders every enabled target without touching the filesystem. Returns
+`{ manifest, registry, diagnostics, targets }` where each target carries its
+planned `files` and legacy `remove` entries. Rejects paths that escape the
+project root, write into `.ai/`, or are claimed by two adapters.
+
+## `inspect(options)`
+
+Runs `plan`, then compares it against the working tree and the ownership
+records. Returns the plan plus:
 
 ```js
 {
-  manifest,
-  targets: [{ id: "codex", files: 1 }],
+  targets: [{ id, files, artifacts, paths, removed }],
+  collisions: [{ target, path }],
+  changed: false,
 }
 ```
 
-Options may include `root`, `manifest`, `registry`, or `adapterDirectory`.
-Supplying `registry` is the supported way to use external adapters in v0.1.
+Each artifact has an `action` of `created`, `updated`, `unchanged`, or
+`collision`. Writes nothing — this is what `aie check` runs.
 
-## `createAdapterRegistry(directory)`
+## `compile(options)`
 
-Discovers `.mjs` adapter modules in a directory, validates their exports, and
-returns a frozen adapter array.
+Runs `inspect`, then commits: writes changed artifacts, removes stale and proven
+legacy files, prunes emptied directories, and updates ownership records. Throws
+on collisions unless `force` is set. Returns the inspection result.
 
-## `validateAdapterRegistry(registry)`
+## `validate(options)`
 
-Validates an adapter array for unique IDs and callable `render` functions. It
-returns a frozen copy of the registry.
+Alias for `plan`. Validates the workspace and every adapter's output without
+comparing against the working tree.
+
+## `planAdoption(root)` and `adopt(root, { write })`
+
+Import existing assistant files into `.ai/`. `planAdoption` returns
+`{ writes, skipped, duplicates, manifest }` without touching anything; `adopt`
+applies that plan when `write` is set. Neither ever modifies or deletes the
+files it reads.
+
+## `createAdapterRegistry(directory)` and `validateAdapterRegistry(registry)`
+
+Discover or validate adapters. Both return a frozen array. Supplying `registry`
+to `compile` is the supported way to use an external adapter.

@@ -1,6 +1,7 @@
-# AI Engineering OS
+# AI Engineering Compiler
 
-> Keep AI instructions in one reviewable source tree. Compile them for the coding assistants your team uses.
+> Keep AI assistant instructions in one reviewable source tree. Compile them for
+> Claude Code and Codex.
 
 [![npm version](https://img.shields.io/npm/v/%40akinlabs%2Fai-engineering)](https://www.npmjs.com/package/@akinlabs/ai-engineering)
 [![npm downloads](https://img.shields.io/npm/dm/%40akinlabs%2Fai-engineering)](https://www.npmjs.com/package/@akinlabs/ai-engineering)
@@ -8,178 +9,171 @@
 [![Node.js](https://img.shields.io/node/v/%40akinlabs%2Fai-engineering)](https://www.npmjs.com/package/@akinlabs/ai-engineering)
 [![License](https://img.shields.io/github/license/akin-oz/ai-engineering)](LICENSE)
 
-AI Engineering OS turns a declarative engineering workflow into a reviewable
-tool-agnostic .ai/ workspace and runtime-specific artifacts. The current
-release supports Claude Code and Codex; workflow compilation is the next
-evolution of the architecture.
-
 ## The problem
 
 AI coding assistants each want instructions in a different place and format.
-At first, copying a few rules into CLAUDE.md, AGENTS.md, or a runtime directory
-is simple. Over time, that creates duplicated instructions, configuration drift,
-and reviews that must check the same policy in several files.
+Copying a few rules into `CLAUDE.md` and `AGENTS.md` is simple at first. It stops
+being simple when the same policy lives in five generated places, because the
+failure is quiet: someone tightens a rule in one file, nothing errors, and the
+assistants start giving different advice depending on which one you opened.
 
-AI Engineering OS keeps project intent in one source tree and generates the
-runtime files from it. The generated files remain visible and commit-ready,
-but they are never edited by hand.
+This compiler keeps project intent in `.ai/` and generates the runtime files
+from it. Generated files stay visible and commit-ready — they are just never
+edited by hand.
 
-## Before and after
-
-    Multiple hand-maintained configurations
-
-    CLAUDE.md
-    AGENTS.md
-    .cursor/rules/
-    ...more runtime-specific files
-
-                             ↓
-
-    One source of truth
-
-    .ai/
-    ├── manifest.yaml
-    ├── agents/
-    ├── rules/
-    └── templates/
-
-                             ↓ ai sync
-
-    Generated runtime artifacts
-
-    .claude/
-    .codex/
-
-## A real transformation
-
-This repository's basic example starts with one rule:
-
-    examples/basic/.ai/rules/concise.md
-
-    Prefer clear, focused changes with explicit trade-offs.
-
-The Claude adapter keeps the rule as a runtime rule file:
-
-    examples/basic/.claude/rules/concise.md
-
-    Prefer clear, focused changes with explicit trade-offs.
-
-The Codex adapter combines the same rule with the example agent in AGENTS.md:
-
-    examples/basic/.codex/AGENTS.md
-
-    ## Rule: concise
-
-    Prefer clear, focused changes with explicit trade-offs.
-
-    ---
-
-    ## Agent: reviewer
-
-    Review changes for correctness, clarity, and maintainability.
-
-The source intent is shared, while each adapter chooses the format that its
-runtime expects.
-
-This repository also dogfoods the compiler: its committed
-[.claude/](.claude) and [.codex/](.codex) artifacts are generated from its
-[.ai/](.ai) workspace.
-
-## Why not maintain two files by hand?
-
-That is a reasonable workflow for a small repository using one or two
-assistants. This tool becomes useful when the instruction set grows, several
-assistants are used by the same team, or the same standards must stay aligned
-across runtime-specific formats.
-
-The benefit is not hiding generated files. It is reviewing project intent once,
-compiling deterministic outputs, and letting CI catch drift.
-
-## Philosophy
-
-- **Single source of truth:** .ai/ owns project intent.
-- **Deterministic output:** the same source produces the same artifacts.
-- **Reviewable changes:** source and generated outputs can be committed and reviewed.
-- **Runtime adapters:** format-specific behavior stays outside the compiler core.
-- **Tool-agnostic intent:** repositories describe engineering behavior, not vendor configuration.
+**Most repositories do not need this.** If one prose file covers your
+instructions, symlink `CLAUDE.md` to `AGENTS.md` and stop there. See
+[docs/comparison.md](docs/comparison.md) for honest comparisons against
+symlinks, the AGENTS.md standard, rulesync, and doing nothing.
 
 ## Quick start
 
-    npm install --save-dev @akinlabs/ai-engineering
-    npx ai init
-    npx ai sync
+```sh
+npm install --save-dev @akinlabs/ai-engineering
+npx aie init
+npx aie sync
+```
 
-ai init creates a minimal .ai/ workspace without overwriting existing files.
-Add rules and agents under .ai/, then run ai sync whenever they change.
+`aie init` creates a `.ai/` workspace with a starter rule, without overwriting
+anything. `aie sync` compiles it:
 
-Validate without generating output:
+    .ai/                              CLAUDE.md
+    ├── manifest.yaml       ──►       AGENTS.md
+    ├── rules/                        .claude/agents/
+    ├── agents/                       .claude/commands/
+    └── commands/
 
-    npx ai validate
+Both runtimes load their instructions from the repository root, so `CLAUDE.md`
+and `AGENTS.md` are the files that actually get read.
 
-In CI, verify that committed artifacts are current:
+In CI, fail the build when generated files drift from their source:
 
-    npx ai sync
-    git diff --exit-code
+```sh
+npx aie check
+```
 
-## Who is this for?
+## It will not overwrite your work
 
-Good fit:
+`aie sync` may only delete or replace a file it can prove it generated: one
+listed in its ownership record (`.ai/state/targets/`), one whose bytes still
+match the source it was copied from, or one carrying the generated banner.
 
-- teams using multiple AI coding assistants
-- repositories with shared engineering standards
-- projects that want AI behavior reviewed alongside source changes
+Anything else is reported and the sync stops before writing:
 
-Probably not necessary:
+    Refusing to overwrite files this workspace does not own:
 
-- a single-developer repository using one assistant
-- a small project with only a few instructions and no duplication
+      CLAUDE.md (claude)
+
+    Move them aside, or run with --force to overwrite them and take ownership.
+
+Your existing `.claude/settings.json` and hand-written commands survive every
+sync. Nothing is skipped silently either — a source a runtime cannot express
+produces a diagnostic naming it, on every run.
+
+## Already have CLAUDE.md and AGENTS.md?
+
+Import them instead of starting over:
+
+```sh
+npx aie adopt
+```
+
+Adopt is a dry run by default. It splits your existing instruction files into
+`.ai/` sources, flags pairs that look like the same policy written twice, and
+never modifies the originals. `--write` applies the plan. See
+[examples/adopt-existing](examples/adopt-existing) for the walkthrough.
+
+## Commands
+
+| Command | Behavior | Exit codes |
+| --- | --- | --- |
+| `aie init` | Create a `.ai` workspace with a starter rule | 0 |
+| `aie adopt` | Import existing assistant files (dry run by default) | 0 |
+| `aie sync` | Compile enabled targets | 0, 1 on failure |
+| `aie check` | Report drift without writing | 0 clean, 1 drift, 2 broken workspace |
+| `aie validate` | Validate the workspace without comparing output | 0, 1 on failure |
+| `aie explain` | Show what a workflow contributed and where it lands | 0 |
+
+Options: `--strict` (warnings become errors), `--force` (overwrite unowned
+files), `--write` (apply an adoption), `--blueprint`, `--dry-run`, `--json`.
+
+## In CI
+
+```yaml
+- uses: akin-oz/ai-engineering@v0
+```
+
+The action runs `aie check`, annotates the drifted files on the pull request,
+and fails the job. It writes nothing.
 
 ## Supported runtimes
 
-The v0.1 release supports:
+| Runtime | Rules | Agents | Commands | Hooks |
+| --- | --- | --- | --- | --- |
+| Claude Code | `CLAUDE.md` | `.claude/agents/` | `.claude/commands/` | `.claude/hooks/` + `settings.json` |
+| Codex | `AGENTS.md` | inlined | — | — |
+| Cursor | `.cursor/rules/*.mdc` | — | — | — |
 
-- Claude Code, through .claude/
-- Codex, through .codex/
+A dash means the runtime has no format for it. The compiler says so on every
+run rather than dropping the source silently.
 
-Additional runtimes are planned, but the current project does not claim to
-support every AI coding assistant.
+Hooks are declared in the manifest with a normalized event
+(`pre-edit`, `post-edit`, `session-start`, `session-end`) and wired into
+`.claude/settings.json` — the compiler owns only the entries it wrote there and
+preserves the rest of your settings.
 
-## Architecture
+## Compiling a workflow instead of listing files
 
-The compiler pipeline is intentionally small:
+`aie init --blueprint` writes a `.ai/blueprint.yaml` that names an engineering
+workflow rather than individual files:
 
-    .ai/manifest.yaml
-            ↓ load and validate
-    immutable project manifest
-            ↓ adapter registry
-    runtime-specific rendering
-            ↓
-    .claude/ and .codex/
+```yaml
+schema: 2
+project:
+  type: library
+workflow:
+  development: spec-driven
+ai:
+  runtimes: [claude, codex]
+```
 
-The compiler core coordinates loading, validation, and adapters. Adapters own
-runtime-specific rendering. See the detailed [architecture
-documentation](docs/architecture.md) and [adapter contract](docs/adapter-api.md).
+`aie sync` composes that workflow into `.ai/generated/` — agents, rules,
+commands, and templates, committed and reviewable — then compiles it for each
+runtime. `aie explain` shows what came from where. Your own files in `.ai/`
+compile alongside it.
 
-The public JavaScript API is documented in [docs/api.md](docs/api.md).
+One workflow ships today (`spec-driven`). More arrive when this one has proven
+useful in real repositories, not before.
 
-The planned workflow compiler lets a blueprint select reusable development,
-testing, review, release, and documentation capabilities, then generates the
-agents, rules, templates, prompts, and conventions consumed by runtime
-adapters. Read the [workflow compiler architecture](docs/workflow-compiler.md)
-for the schema and incremental migration roadmap.
+## Examples
 
-## Roadmap
+- [examples/basic](examples/basic) — smallest complete workspace
+- [examples/typescript-library](examples/typescript-library) — the case where
+  hand-maintenance actually fails
+- [examples/adopt-existing](examples/adopt-existing) — a repository already
+  carrying drifted instruction files, and how to import it
 
-Near-term work will focus on diagnostics, stronger validation, and incremental
-compilation. Broader runtime and context-graph work will follow only when the
-core workflow has proven useful in real repositories.
+This repository compiles itself: [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md)
+are generated from [.ai/](.ai), and CI fails if they drift or if any source file
+is empty.
+
+## Documentation
+
+- [docs/](docs) — shipped behavior: [architecture](docs/architecture.md),
+  [public API](docs/api.md), [adapter contract](docs/adapter-api.md),
+  [writing an adapter](docs/writing-an-adapter.md),
+  [comparisons](docs/comparison.md)
+- [specs/](specs) — scoped work that is committed but not finished
+- [rfcs/](rfcs) — design that may never be built
+
+That split is deliberate: 0.1 documented features that did not exist, which made
+the real claims harder to trust.
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull
-request. Security concerns should be reported according to
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Report security concerns per
 [SECURITY.md](SECURITY.md).
 
 ## License
 
-AI Engineering OS is released under the [MIT License](LICENSE).
+[MIT](LICENSE)

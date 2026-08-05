@@ -1,4 +1,7 @@
-# Architecture decisions
+# Architecture
+
+This describes what the compiler does today. Forward-looking design lives in
+[rfcs/](../rfcs); scoped work in progress lives in [specs/](../specs).
 
 ## Source and build boundaries
 
@@ -6,83 +9,95 @@
 source does not live under `.ai/`, because that would make every consuming
 repository carry and potentially fork compiler implementation.
 
-The package resolves `.ai/manifest.yaml` relative to the project root and
-writes generated runtime directories relative to that same root. Output paths
-are constrained to remain inside the project root.
+The package resolves `.ai/manifest.yaml` relative to the project root and writes
+generated artifacts relative to that same root. Every generated path is
+validated to stay inside the project root and outside `.ai/`.
 
-## Compilation pipeline
+## Pipeline
 
 ```text
 project root
-  -> manifest loader
-  -> normalized immutable manifest
+  -> workspace loader        blueprint or manifest, whichever exists
+  -> workflow composition    blueprint only: pack -> .ai/generated sources
+  -> normalized manifest     immutable, deeply frozen, contents included
   -> adapter registry
-  -> enabled adapters
-  -> generated runtime artifacts
+  -> enabled adapters        render(manifest, context) -> file contents
+  -> plan                    paths validated, cross-adapter collisions rejected
+  -> comparison              against the working tree and ownership records
+  -> transaction             writes, stale cleanup, ownership records
 ```
 
-The manifest is loaded once and passed to adapters. Adapters do not mutate it.
-The compiler does not inspect adapter output formats.
+`aie validate` stops after the plan. `aie check` stops after the comparison.
+`aie sync` runs the transaction.
 
-The next architectural layer is the workflow compiler. A schema 2 blueprint is
-resolved into a normalized workflow graph and materialized source artifacts
-before this adapter pipeline runs. Schema 1 manifests continue to bypass that
-phase, preserving the current contract. See the [workflow compiler design](workflow-compiler.md)
-for the composition model and migration roadmap.
+## Two ways to describe a workspace
 
-Adapters own the complete installation surface of each enabled runtime, not
-only a runtime directory. This includes root-level instruction files such as
-`CLAUDE.md` or `AGENTS.md`, hooks, metadata, and future runtime assets. The
-compiler coordinates path ownership and atomic rendering but does not know
-which artifacts a runtime requires. See the [runtime parity plan](runtime-parity.md).
+`.ai/manifest.yaml` (schema 1) lists sources by hand. `.ai/blueprint.yaml`
+(schema 2) names a workflow, and the compiler composes a versioned pack into
+`.ai/generated/` before adapters run. Both produce the same normalized
+manifest, so adapters never learn which was used. Having both is an error.
 
-## Adapter contract
+Materialized sources are written through the same ownership machinery as any
+other artifact, under a `workspace` target — which is why `.ai/generated/` is
+drift-checked by `aie check` like everything else, and why it is the one place
+inside `.ai/` the compiler may write.
 
-An adapter is a small module with two exports:
+## Adapters are pure
+
+An adapter exports an id and a `render(manifest, context)` function returning
+file contents:
 
 ```js
-export const id = "runtime";
-export async function render(manifest) {}
+export const id = "example";
+export async function render(manifest, context) {
+  return { files: [{ path: "EXAMPLE.md", contents: "..." }] };
+}
 ```
 
-The registry discovers `.mjs` files and validates this contract. This avoids a
-central runtime switch and keeps adding a built-in adapter independent from
-compiler orchestration. Adapter-specific concerns such as Markdown structure,
-copy mappings, manifests, or generated filenames stay inside the adapter.
+Adapters never write to disk, never read generated output, and never import each
+other. The compiler owns every write, which is what makes ownership tracking,
+collision detection, and `check` possible at all. When an adapter merges into a
+file the user also edits, the compiler pre-reads that file and passes it in
+`context` rather than letting the adapter reach for it. See the
+[adapter contract](adapter-api.md) and
+[writing an adapter](writing-an-adapter.md).
 
-## Why the registry is injectable
+## Ownership
 
-The default registry discovers package-provided adapters. `compile({ registry })`
-allows tests, custom distributions, and future plugins to supply adapters
-without coupling the compiler to a plugin loader today. Plugin loading is a
-future policy layer, not a reason to make the core depend on a plugin system.
+The compiler may only delete or overwrite a file it can prove it created:
+
+1. the file is listed in the target's ownership record
+   (`.ai/state/targets/<id>.json`, committed to the repository);
+2. its bytes still match the source it was copied from; or
+3. it carries the generated banner.
+
+Anything else is a collision: the sync reports every colliding path and stops
+before writing. `--force` overwrites them and takes ownership.
+
+Stale files — recorded as owned but no longer generated — are removed, and
+directories left empty by that removal are pruned. A directory containing
+anything else is never touched.
+
+Some files are shared rather than owned outright. `.claude/settings.json`
+belongs to the user; the compiler owns only the hook entries it wrote there,
+recorded verbatim in the ownership record. On the next sync it replaces exactly
+those entries, leaves everything else alone, and reports an error instead of
+overwriting if one of them was hand-edited.
 
 ## Determinism
 
-Manifest lists are deduplicated while preserving declared order. Directory
-traversal is sorted. Adapters must produce stable output from the immutable
-manifest and source files. Single-file writes are staged and renamed, and
-adapters replace their complete managed output, preventing stale files from
-surviving a successful compile. CI can therefore run `ai sync` followed by
-`git diff --exit-code`.
+Manifest lists are deduplicated while preserving declared order, directory
+traversal is sorted, and section rendering is shared by every adapter so
+ordering cannot drift between runtimes. Ownership records deliberately omit the
+tool version so a release does not rewrite every repository's committed state.
 
-Incremental compilation should be added around this pipeline later, using a
-content-addressed dependency graph and adapter-declared input/output scopes.
-It should not be embedded in individual adapters prematurely.
+The same source tree and package version always produce byte-identical output,
+which is what makes `aie check` usable as a CI gate.
 
-## Planned extension points
+## Diagnostics
 
-- Diagnostics: `DiagnosticError` already carries structured diagnostic data.
-- Graphs: add a graph-building phase between manifest loading and rendering.
-- Path-aware rules: extend normalized manifest entries with selectors without
-  changing adapter contracts.
-- Templates: add a shared template service or adapter-local template policy.
-- Plugins: compose registries or load package entry points before compilation.
-- Monorepos: make `loadManifest` operate on a discovered workspace root and
-  compile each project as an explicit unit.
-- Incremental sync: cache normalized inputs and adapter output fingerprints.
-- Workflow capabilities: compose reusable development, review, documentation,
-  and release packs into a runtime-neutral graph before adapter rendering.
-
-These are intentionally not implemented in v1. The current interfaces leave
-those responsibilities outside the filesystem and adapter implementations.
+Loading and planning collect diagnostics rather than failing on the first
+problem, so a broken workspace can be fixed in one pass. Errors abort; warnings
+print and continue; `--strict` promotes warnings to errors. Every diagnostic
+carries a stable code — an input that is ignored or unsupported always produces
+one rather than being dropped silently.

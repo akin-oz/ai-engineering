@@ -1,4 +1,16 @@
-# Runtime parity plan
+# RFC 0002: Runtime parity
+
+- Status: **Accepted, partially implemented in 0.2.0**
+- Implemented by: [spec 001](../specs/spec-001-ownership-and-non-destructive-sync.md)
+  (ownership and transactions), [spec 002](../specs/spec-002-root-artifacts-and-adapter-surface.md)
+  (root artifacts and the surface declaration)
+- Remaining: hooks, settings merging, and runtime metadata — see
+  [spec 009](../specs/spec-009-agents-commands-hooks-compilation.md)
+
+> Sections describing hooks and metadata are design, not shipped behavior. The
+> 0.2.0 implementation differs in two places: adapters return file contents
+> instead of staging directories, and `.codex/` was dropped rather than kept
+> beside the root `AGENTS.md`.
 
 ## Problem
 
