@@ -1,27 +1,39 @@
 # Basic example
 
-This example shows the complete source-to-runtime workflow:
+The smallest complete workspace: one rule, one agent, one command, compiled for
+both supported runtimes.
 
-    .ai/                    source intent
-            ↓ ai sync
-    .claude/ and .codex/    generated artifacts
+Hand-maintaining this much is still easy, which is the point of starting here —
+it shows the mechanism without arguing for it. See
+[typescript-library](../typescript-library) for the case where the compiler
+earns its place.
 
-The source workspace contains one rule and one agent:
+## Source
 
-- .ai/rules/concise.md
-- .ai/agents/reviewer.md
+    .ai/
+    ├── manifest.yaml           selects what compiles
+    ├── rules/concise.md
+    ├── agents/reviewer.md
+    └── commands/summarize-diff.md
 
-The generated outputs preserve the same intent in each runtime's format:
+## Generated
 
-- .claude/rules/concise.md and .claude/agents/reviewer.md
-- .codex/AGENTS.md
+    CLAUDE.md                          rules, inlined
+    AGENTS.md                          rules and agents, inlined
+    .claude/agents/reviewer.md
+    .claude/commands/summarize-diff.md
+    .ai/state/targets/*.json           which files the compiler owns
 
-From the repository root, validate and compile the example with:
+Both runtimes read their instructions from the repository root, so `CLAUDE.md`
+and `AGENTS.md` are the files that actually get loaded. Codex has no repository
+command format, so `summarize-diff` compiles for Claude only — reported as an
+`info` diagnostic rather than dropped silently.
+
+## Regenerate
 
     cd examples/basic
-    node ../../bin/ai.mjs validate
-    node ../../bin/ai.mjs sync
+    node ../../bin/aie.mjs check    # is the committed output current?
+    node ../../bin/aie.mjs sync     # regenerate it
 
-The generated directories are committed so the result can be inspected
-without running the compiler. They should be regenerated after changing files
-under .ai/.
+The generated files are committed so the result can be inspected without running
+the compiler, and CI fails if they drift from the source.

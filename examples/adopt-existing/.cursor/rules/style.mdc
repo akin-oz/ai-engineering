@@ -1,0 +1,9 @@
+---
+description: Source style for this service
+globs: src/**/*.ts
+alwaysApply: false
+---
+
+Use named exports and explicit return types on exported functions. Keep handler
+functions thin: parse, delegate, respond. Business logic lives outside the HTTP
+layer so it can be tested without a server.

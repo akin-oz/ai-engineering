@@ -1,0 +1,9 @@
+Every exported symbol carries a TSDoc comment stating what it does and what it
+throws. Document the failure modes: callers discover those at runtime otherwise.
+
+README examples must be runnable as written. An example that omits imports or
+uses an option that no longer exists is worse than no example, because it costs
+a reader time before they find out.
+
+When behavior changes, update the documentation in the same pull request. Docs
+that lag the code teach people the wrong thing with full confidence.

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "adapter": "claude",
+  "generator": "@akinlabs/ai-engineering",
+  "paths": [
+    ".claude/agents/reviewer.md",
+    ".claude/commands/summarize-diff.md",
+    "CLAUDE.md"
+  ]
+}

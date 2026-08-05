@@ -1,0 +1,25 @@
+version: 1
+
+targets:
+  claude:
+    enabled: true
+
+  codex:
+    enabled: true
+
+  cursor:
+    enabled: true
+
+agents:
+  - reviewer
+  - release-manager
+
+rules:
+  - code-style
+  - testing
+  - releases
+  - documentation
+
+commands:
+  - changeset
+  - review-pr

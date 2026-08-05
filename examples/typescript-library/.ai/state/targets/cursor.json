@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "adapter": "cursor",
+  "generator": "@akinlabs/ai-engineering",
+  "paths": [
+    ".cursor/rules/code-style.mdc",
+    ".cursor/rules/documentation.mdc",
+    ".cursor/rules/releases.mdc",
+    ".cursor/rules/testing.mdc"
+  ]
+}

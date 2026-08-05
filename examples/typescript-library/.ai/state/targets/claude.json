@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "adapter": "claude",
+  "generator": "@akinlabs/ai-engineering",
+  "paths": [
+    ".claude/agents/release-manager.md",
+    ".claude/agents/reviewer.md",
+    ".claude/commands/changeset.md",
+    ".claude/commands/review-pr.md",
+    "CLAUDE.md"
+  ]
+}
