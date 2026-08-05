@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "secure-npm-package": {
+      "source": "evilmartians/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/secure-npm-package/SKILL.md",
+      "computedHash": "a0c8093af4dc062a63e5571f615b14857ef093884196cef36281fc521eda2033"
+    }
+  }
+}
