@@ -1,0 +1,31 @@
+name: "AI Engineering Compiler"
+description: "Fail the build when generated AI assistant instructions drift from their .ai source."
+author: "Akin Oztorun"
+
+branding:
+  icon: refresh-cw
+  color: purple
+
+inputs:
+  working-directory:
+    description: "Directory containing the .ai workspace."
+    required: false
+    default: "."
+  strict:
+    description: "Treat warnings as errors."
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install the compiler
+      shell: bash
+      run: npm ci --omit=dev --prefix "$GITHUB_ACTION_PATH"
+
+    - name: Check for drift
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        AIE_STRICT: ${{ inputs.strict }}
+      run: node "$GITHUB_ACTION_PATH/scripts/github-check.mjs"
