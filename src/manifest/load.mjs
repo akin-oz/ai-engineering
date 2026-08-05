@@ -4,11 +4,22 @@ import process from "node:process";
 
 import { parse } from "yaml";
 
-import { fail } from "../diagnostics.mjs";
+import { createDiagnostics, fail } from "../diagnostics.mjs";
+import {
+  SOURCE_KINDS,
+  loadHooks,
+  loadSourceEntries,
+  reportUnlisted,
+  reportUnusedHookScripts,
+} from "./sources.mjs";
+import { createFileMap, finalizeManifest, normalizeTargets } from "./normalize.mjs";
 
 const MANIFEST_VERSION = 1;
 
-export async function loadManifest(root = process.cwd()) {
+export const MANIFEST_FILE = path.join(".ai", "manifest.yaml");
+
+export async function loadManifest(root = process.cwd(), options = {}) {
+  const diagnostics = options.diagnostics ?? createDiagnostics();
   const projectRoot = path.resolve(root);
   const sourceRoot = path.join(projectRoot, ".ai");
   const file = path.join(sourceRoot, "manifest.yaml");
@@ -21,7 +32,7 @@ export async function loadManifest(root = process.cwd()) {
 
 Run:
 
-    ai init
+    aie init
 
 to initialize this repository.`);
   }
@@ -36,29 +47,39 @@ to initialize this repository.`);
     });
   }
 
-  const version = validateManifest(raw, file);
-
+  const relativeManifest = path.relative(projectRoot, file);
+  const version = validateManifest(raw, relativeManifest);
   const targets = normalizeTargets(raw.targets ?? {}, projectRoot);
   const files = createFileMap(projectRoot, sourceRoot, targets);
-  const agents = normalizeNames(raw.agents, "agents", file);
-  const rules = normalizeNames(raw.rules, "rules", file);
 
-  await validateSourceEntries(files.agents, agents, "agent", projectRoot);
-  await validateSourceEntries(files.rules, rules, "rule", projectRoot);
+  const names = Object.fromEntries(
+    SOURCE_KINDS.map((kind) => [kind, normalizeNames(raw[kind], kind, relativeManifest)])
+  );
 
-  return deepFreeze({
+  const sources = Object.fromEntries(
+    await Promise.all(
+      SOURCE_KINDS.map(async (kind) => [
+        kind,
+        await loadSourceEntries(kind, names[kind], files[kind], projectRoot, diagnostics),
+      ])
+    )
+  );
+
+  sources.hooks = await loadHooks(raw.hooks, sourceRoot, projectRoot, diagnostics, relativeManifest);
+
+  await reportUnlisted(names, files, projectRoot, diagnostics);
+  await reportUnusedHookScripts(sources.hooks, files.hooks, projectRoot, diagnostics);
+
+  diagnostics.throwIfFailed();
+
+  return finalizeManifest({
     version,
     root: projectRoot,
     sourceRoot,
     targets,
-    agents,
-    rules,
+    names,
+    sources,
     files,
-    resolve: {
-      agent: (name) => path.join(files.agents, `${name}.md`),
-      rule: (name) => path.join(files.rules, `${name}.md`),
-      output: (id) => files.outputs[id],
-    },
   });
 }
 
@@ -98,47 +119,11 @@ function validateManifest(value, file) {
   return version;
 }
 
-function normalizeTargets(targets, root) {
-  return Object.fromEntries(Object.entries(targets).map(([id, target]) => {
-    const configuredOutput = target.output ?? `.${id}`;
-
-    if (path.isAbsolute(configuredOutput)) {
-      fail(`Target "${id}" output must be a relative path`);
-    }
-
-    const output = path.resolve(root, configuredOutput);
-    const relative = path.relative(root, output);
-    const sourceRelative = path.relative(root, path.join(root, ".ai"));
-
-    if (
-      relative.startsWith("..") ||
-      path.isAbsolute(relative) ||
-      relative === sourceRelative ||
-      relative.startsWith(`${sourceRelative}${path.sep}`)
-    ) {
-      fail(`Target "${id}" output must stay inside the project root`);
-    }
-
-    return [id, { ...target, output }];
-  }));
-}
-
-function createFileMap(root, sourceRoot, targets) {
-  return {
-    root,
-    sourceRoot,
-    agents: path.join(sourceRoot, "agents"),
-    rules: path.join(sourceRoot, "rules"),
-    hooks: path.join(sourceRoot, "hooks"),
-    commands: path.join(sourceRoot, "commands"),
-    templates: path.join(sourceRoot, "templates"),
-    outputs: Object.fromEntries(
-      Object.entries(targets).map(([id, target]) => [id, target.output])
-    ),
-  };
-}
-
 function normalizeNames(value = [], field, file) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
   if (!Array.isArray(value)) {
     fail(`Manifest field "${field}" must be an array`, { file });
   }
@@ -162,41 +147,6 @@ function normalizeNames(value = [], field, file) {
   return names;
 }
 
-async function validateSourceEntries(directory, names, type, root) {
-  await Promise.all(names.map(async (name) => {
-    const file = path.join(directory, `${name}.md`);
-
-    if (!(await exists(file))) {
-      fail(`Unknown ${type} "${name}"`, {
-        file: path.relative(root, file),
-      });
-    }
-  }));
-}
-
-async function exists(file) {
-  try {
-    await fs.access(file);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) {
-    return value;
-  }
-
-  Object.freeze(value);
-
-  for (const child of Object.values(value)) {
-    deepFreeze(child);
-  }
-
-  return value;
 }

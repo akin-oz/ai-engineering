@@ -1,78 +1,105 @@
 import assert from "node:assert/strict";
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
 import test from "node:test";
 
 import { render as renderClaude } from "../src/adapters/claude.mjs";
 import { render as renderCodex } from "../src/adapters/codex.mjs";
-import { fileExists, makeWorkspace } from "./helpers.mjs";
+import { loadManifest } from "../src/manifest/load.mjs";
+import { makeWorkspace } from "./helpers.mjs";
 
-function adapterManifest(workspace) {
-  const files = {
-    agents: path.join(workspace.ai, "agents"),
-    rules: path.join(workspace.ai, "rules"),
-    hooks: path.join(workspace.ai, "hooks"),
-    commands: path.join(workspace.ai, "commands"),
-    templates: path.join(workspace.ai, "templates"),
-  };
+const MANIFEST = [
+  "version: 1",
+  "targets:",
+  "  claude:",
+  "    enabled: true",
+  "  codex:",
+  "    enabled: true",
+  "agents:",
+  "  - architect",
+  "rules:",
+  "  - engineering",
+  "commands:",
+  "  - review",
+  "",
+].join("\n");
 
-  return {
-    files,
-    agents: ["architect"],
-    rules: ["engineering"],
-    resolve: {
-      agent: (name) => path.join(files.agents, `${name}.md`),
-      rule: (name) => path.join(files.rules, `${name}.md`),
-      output: (id) => path.join(workspace.root, `.${id}`),
-    },
-  };
+async function fixture() {
+  const workspace = await makeWorkspace({
+    manifest: MANIFEST,
+    agents: { "architect.md": "---\ndescription: architect\n---\nDesign the system.\n" },
+    rules: { "engineering.md": "Keep changes small.\n" },
+    commands: { "review.md": "Review the diff.\n" },
+    templates: { "agents.md": "{{RULES}}\n\n---\n\n{{AGENTS}}\n" },
+  });
+
+  return { workspace, manifest: await loadManifest(workspace.root) };
 }
 
-test("Claude adapter copies source directories and removes stale output", async () => {
-  const workspace = await makeWorkspace({
-    agents: { "architect.md": "architect" },
-    rules: { "engineering.md": "engineering" },
-  });
+test("Claude adapter generates root instructions plus agent and command files", async () => {
+  const { workspace, manifest } = await fixture();
 
   try {
-    const manifest = adapterManifest(workspace);
-    await renderClaude(manifest);
+    const result = await renderClaude(manifest);
+    const paths = result.files.map((file) => file.path);
 
-    await fs.writeFile(path.join(workspace.root, ".claude", "stale.txt"), "stale");
-    await renderClaude(manifest);
+    assert.deepEqual(paths, [
+      "CLAUDE.md",
+      ".claude/agents/architect.md",
+      ".claude/commands/review.md",
+    ]);
 
-    assert.equal(await fs.readFile(path.join(workspace.root, ".claude", "agents", "architect.md"), "utf8"), "architect");
-    assert.equal(await fileExists(path.join(workspace.root, ".claude", "stale.txt")), false);
+    const instructions = result.files[0].contents;
+
+    assert.match(instructions, /## Rule: engineering/);
+    assert.match(instructions, /Keep changes small/);
+
+    assert.equal(
+      result.files[1].contents,
+      "---\ndescription: architect\n---\nDesign the system.\n",
+      "agent frontmatter reaches the runtime untouched"
+    );
   } finally {
     await workspace.cleanup();
   }
 });
 
-test("Codex adapter renders deterministic ordered Markdown and removes stale output", async () => {
-  const workspace = await makeWorkspace({
-    agents: { "architect.md": "architect" },
-    rules: { "engineering.md": "engineering" },
-    templates: { "codex-agents.md": "{{RULES}}\n{{AGENTS}}\n" },
-  });
+test("Codex adapter renders one root file in manifest order", async () => {
+  const { workspace, manifest } = await fixture();
 
   try {
-    const manifest = adapterManifest(workspace);
-    await renderCodex(manifest);
-    const output = path.join(workspace.root, ".codex", "AGENTS.md");
-    const first = await fs.readFile(output);
-    const firstHash = crypto.createHash("sha256").update(first).digest("hex");
+    const result = await renderCodex(manifest);
 
-    await fs.writeFile(path.join(workspace.root, ".codex", "stale.txt"), "stale");
-    await renderCodex(manifest);
+    assert.deepEqual(result.files.map((file) => file.path), ["AGENTS.md"]);
 
-    const second = await fs.readFile(output);
-    const secondHash = crypto.createHash("sha256").update(second).digest("hex");
+    const document = result.files[0].contents;
 
-    assert.equal(firstHash, secondHash);
-    assert.equal(await fileExists(path.join(workspace.root, ".codex", "stale.txt")), false);
-    assert.match(second.toString(), /## Rule: engineering[\s\S]*## Agent: architect/);
+    assert.match(document, /## Rule: engineering[\s\S]*## Agent: architect/);
+    assert.doesNotMatch(document, /description: architect/, "frontmatter is stripped when inlined");
+
+    const unsupported = result.diagnostics.find((entry) => entry.code === "capability-unsupported");
+
+    assert.equal(unsupported.severity, "info");
+    assert.match(unsupported.message, /command "review"/);
   } finally {
     await workspace.cleanup();
   }
 });
+
+test("adapters are pure: rendering twice yields identical output and writes nothing", async () => {
+  const { workspace, manifest } = await fixture();
+
+  try {
+    const first = await renderClaude(manifest);
+    const second = await renderClaude(manifest);
+
+    assert.deepEqual(first.files, second.files);
+    assert.equal(await workspaceHasOutput(workspace.root), false);
+  } finally {
+    await workspace.cleanup();
+  }
+});
+
+async function workspaceHasOutput(root) {
+  const { fileExists } = await import("./helpers.mjs");
+
+  return await fileExists(`${root}/CLAUDE.md`) || await fileExists(`${root}/.claude`);
+}

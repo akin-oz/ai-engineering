@@ -1,0 +1,7 @@
+# Project instructions
+
+{{RULES}}
+
+---
+
+{{AGENTS}}

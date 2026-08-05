@@ -1,0 +1,17 @@
+id: development/spec-driven
+version: 1
+description: >-
+  Write the spec first, implement against it, and keep each change inside the
+  boundary the spec describes.
+
+contributes:
+  agents:
+    - spec-author
+    - implementer
+  rules:
+    - spec-first
+    - change-boundary
+  commands:
+    - spec
+  templates:
+    - spec

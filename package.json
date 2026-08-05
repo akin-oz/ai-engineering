@@ -1,6 +1,6 @@
 {
   "name": "@akinlabs/ai-engineering",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Compile tool-agnostic .ai workspaces into AI coding assistant runtimes.",
   "keywords": [
     "ai",
@@ -27,6 +27,7 @@
   },
   "type": "module",
   "bin": {
+    "aie": "bin/aie.mjs",
     "ai": "bin/ai.mjs"
   },
   "exports": {
@@ -35,6 +36,7 @@
   "files": [
     "bin",
     "src",
+    "packs",
     "README.md",
     "docs",
     "LICENSE"
@@ -46,8 +48,9 @@
     "access": "public"
   },
   "scripts": {
-    "check": "node --check bin/ai.mjs && node --check src/index.mjs && node --check src/cli/run.mjs",
-    "test": "node --test"
+    "check": "node --check bin/aie.mjs && node --check bin/ai.mjs && node --check src/index.mjs && node --check src/cli/run.mjs",
+    "test": "node --test",
+    "verify:dogfood": "node scripts/verify-dogfood.mjs"
   },
   "dependencies": {
     "yaml": "^2.8.1"
