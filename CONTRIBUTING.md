@@ -20,6 +20,19 @@ node scripts/verify-dogfood.mjs . examples/*/
 `aie check` reports whether the committed generated files still match their
 source; run `aie sync` if they do not.
 
+## Dependencies
+
+This repository sets a three-day cooldown in `.npmrc`: a dependency version
+published less than three days ago will not install. Most malicious packages
+are taken down within hours, so the delay blocks the large majority of them at
+the cost of waiting a little for legitimate updates. If an install fails
+because a version is too new, that is the cooldown working — wait, or state the
+case for an exception in the pull request.
+
+Dependency lifecycle scripts are disabled for the same reason. Adding a
+dependency that needs its install script to run is a decision for the pull
+request, not a config change to make quietly.
+
 ## Ground rules
 
 **Never delete or overwrite a file the compiler cannot prove it created.** A

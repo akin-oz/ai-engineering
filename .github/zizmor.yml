@@ -1,0 +1,7 @@
+rules:
+  adhoc-packages:
+    ignore:
+      # The package-smoke job installs the packed tarball on purpose: proving
+      # what npm would actually deliver is the whole point of that job, and it
+      # cannot be done from a lockfile.
+      - ci.yml

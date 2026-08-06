@@ -1,0 +1,103 @@
+name: Release
+
+# Pushing a version tag stages a release on npm. It does not publish one:
+# a human still has to approve it with 2FA. There is no npm token anywhere in
+# this repository — the publish job authenticates through OIDC as a trusted
+# publisher, and only this file is trusted.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  verify:
+    name: Verify the release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          package-manager-cache: false # A poisoned cache must not reach a release
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: A release must have a tag, a version, a changelog entry, and a note
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+
+          if [ ! -s ".github/releases/$TAG.md" ]; then
+            echo "::error::.github/releases/$TAG.md is missing or empty"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check syntax
+        run: npm run check
+
+      - name: The packed package must be complete
+        run: npm pack --dry-run
+
+      - name: This repository's own workspace must compile
+        run: |
+          node bin/aie.mjs validate --strict
+          node bin/aie.mjs check --strict
+
+      - name: Sources must compile to real content
+        run: node scripts/verify-dogfood.mjs . examples/basic examples/typescript-library
+
+      - name: Every example must compile without drift
+        run: |
+          for example in examples/*/; do
+            [ -d "$example/.ai" ] || continue
+            (cd "$example" && node ../../bin/aie.mjs check)
+          done
+
+  publish:
+    name: Stage the release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    # This job installs nothing and caches nothing. Anything that executes here
+    # could publish the package, so nothing executes here but npm.
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Stage the npm release for approval
+        run: npm stage publish --ignore-scripts
