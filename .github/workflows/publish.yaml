@@ -8,7 +8,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Full versions only. The floating `v0` tag moves on every release, and
+      # matching it here would start a release for a tag that is not one —
+      # verify would reject it, correctly, once per release, as noise.
+      - "v*.*.*"
 
 jobs:
   verify:
