@@ -106,12 +106,37 @@ jobs:
           version="$(npm pkg get version)"
           version="${version//\"/}"
 
-          # A rerun of an already-published release must not go red: npm
-          # rejects publishing over an existing version, so stage only when
-          # the version is not on the registry yet.
-          if [ -n "$(npm view "$name@$version" version 2>/dev/null || true)" ]; then
-            echo "$name@$version is already published; nothing to stage."
-            exit 0
+          # A rerun of an already-released version must not go red: npm
+          # rejects publishing over an existing version. E404 is the only
+          # lookup failure that means "not published" — any other failure is
+          # an unknown registry state, and staging on a guess is worse than
+          # failing here.
+          if published="$(npm view "$name@$version" version 2>"$RUNNER_TEMP/view-stderr")"; then
+            if [ -n "$published" ]; then
+              echo "$name@$version is already published; nothing to stage."
+              exit 0
+            fi
+          else
+            lookup_error="$(<"$RUNNER_TEMP/view-stderr")"
+            if [[ "$lookup_error" != *"E404"* ]]; then
+              echo "$lookup_error"
+              echo "::error::Could not determine whether $name@$version is published"
+              exit 1
+            fi
           fi
 
-          npm stage publish --ignore-scripts
+          # A version can also be staged but not yet approved. npm stage list
+          # needs credentials this job does not hold before publishing (the
+          # OIDC token is minted during the publish call itself), so the E409
+          # conflict npm returns for a second stage of the same version is
+          # the reliable signal — treat it as success, not failure.
+          if output="$(npm stage publish --ignore-scripts 2>&1)"; then
+            echo "$output"
+          else
+            echo "$output"
+            if [[ "$output" == *"E409"* ]]; then
+              echo "$name@$version is already staged and awaiting approval; nothing to do."
+              exit 0
+            fi
+            exit 1
+          fi
