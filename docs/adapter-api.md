@@ -103,14 +103,50 @@ otherwise act on it. Declaring `unsupported` does not excuse silence — emit a
   relative, content, body, metadata }` for each declared source, already read.
   `content` is the file verbatim; `body` has frontmatter removed; `metadata` is
   the parsed frontmatter.
-- `sources.hooks` — `{ id, event, name, relative, content, mode }` for each
-  declared hook. Events are `pre-edit`, `post-edit`, `session-start`, and
-  `session-end`.
+- `sources.hooks` — `{ id, event, tools, name, relative, content, mode }` for
+  each declared hook. See the event vocabulary below.
 - `workflow` — present only for blueprint workspaces: the workflow name, the
   pack that produced the sources, and what it contributed.
 - `resolve.directory(id)` — the target's output directory, relative to root.
 - `resolve.output(id)` — the same directory, absolute.
 - `files` — resolved source directories.
+
+## Hook events
+
+Hooks are declared with a normalized event, in either `.ai/manifest.yaml` or
+`.ai/blueprint.yaml`:
+
+```yaml
+hooks:
+  - id: format-on-write
+    event: post-edit
+    run: hooks/format.sh
+
+  - id: commit-guard
+    event: pre-tool
+    tools: [Bash]
+    run: hooks/commit-guard.sh
+```
+
+| Event | Fires | `tools` |
+| --- | --- | --- |
+| `pre-edit` | before the runtime edits a file | not accepted |
+| `post-edit` | after the runtime edits a file | not accepted |
+| `pre-tool` | before a named tool runs | **required** |
+| `post-tool` | after a named tool runs | **required** |
+| `session-start` | when a session begins | not accepted |
+| `session-end` | when a session ends | not accepted |
+| `turn-end` | when the runtime finishes a turn | not accepted |
+
+`pre-edit` and `post-edit` are sugar for the edit tools; `pre-tool` and
+`post-tool` exist for everything else and must name their tools. Tool names are
+the runtime's own vocabulary, which is why they are only accepted where a
+runtime can act on them — declaring `tools` on an event that does not fire for
+a tool is an error rather than a silently ignored field.
+
+The vocabulary grows only when a runtime can express the new event. Anything a
+target cannot express produces a `capability-unsupported` diagnostic naming the
+hook.
 
 ## Using an external adapter
 

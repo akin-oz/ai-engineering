@@ -6,16 +6,18 @@ import { parse } from "yaml";
 
 import { createDiagnostics, fail } from "../diagnostics.mjs";
 import { listMarkdown, readText } from "../filesystem.mjs";
-import { describeSource } from "./sources.mjs";
+import { describeSource, loadHooks } from "./sources.mjs";
 import { createFileMap, finalizeManifest, normalizeTargets } from "./normalize.mjs";
 
 const BLUEPRINT_VERSION = 2;
 const PACKS = fileURLToPath(new URL("../../packs/", import.meta.url));
 
-const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai"]);
+const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai", "hooks"]);
 const PROJECT_KEYS = new Set(["type"]);
 const STACK_KEYS = new Set(["language", "runtime"]);
-const WORKFLOW_KEYS = new Set(["development"]);
+const WORKFLOW_KEYS = new Set(["development", "disable"]);
+
+const CONTRIBUTION_ID = /^(agent|rule|command|template|hook)\.[a-z0-9][a-z0-9-]*$/;
 const AI_KEYS = new Set(["runtimes"]);
 
 const PROJECT_TYPES = new Set(["library", "saas", "cli", "research", "monorepo"]);
@@ -40,7 +42,11 @@ export async function loadBlueprint(root, options = {}) {
   }
 
   const blueprint = validateBlueprint(raw, relative);
-  const pack = await loadPack(WORKFLOWS[blueprint.workflow.development]);
+  const pack = disableContributions(
+    await loadPack(WORKFLOWS[blueprint.workflow.development]),
+    blueprint.workflow.disable ?? [],
+    relative
+  );
 
   const targets = normalizeTargets(
     Object.fromEntries(blueprint.ai.runtimes.map((runtime) => [runtime, { enabled: true }])),
@@ -62,7 +68,30 @@ export async function loadBlueprint(root, options = {}) {
     names[kind] = sources[kind].map((entry) => entry.id);
   }
 
-  sources.hooks = [];
+  const scripts = materializeHookScripts(pack, files.generated, root);
+  const seen = new Set();
+
+  // Pack hooks first: a blueprint declaring the same id as the pack is the same
+  // conflict as a local rule shadowing a pack rule, and is reported as one.
+  const packHooks = await loadHooks(
+    pack.hooks.map((hook) => ({ ...hook, run: path.join("generated", "hooks", hook.run) })),
+    sourceRoot,
+    root,
+    diagnostics,
+    `${pack.id} pack.yaml`,
+    { provided: scripts.provided, seen }
+  );
+
+  const localHooks = await loadHooks(
+    blueprint.hooks,
+    sourceRoot,
+    root,
+    diagnostics,
+    relative,
+    { seen }
+  );
+
+  sources.hooks = [...packHooks, ...localHooks];
 
   diagnostics.throwIfFailed();
 
@@ -74,16 +103,84 @@ export async function loadBlueprint(root, options = {}) {
     names,
     sources,
     files,
-    generated: CONTRIBUTION_KINDS.flatMap((kind) =>
-      contributions[kind].map((entry) => ({ path: entry.path, contents: entry.contents }))),
+    generated: [
+      ...CONTRIBUTION_KINDS.flatMap((kind) =>
+        contributions[kind].map((entry) => ({ path: entry.path, contents: entry.contents }))),
+      ...scripts.files,
+    ],
     workflow: {
       development: blueprint.workflow.development,
+      project: blueprint.project,
+      stack: blueprint.stack,
       pack: { id: pack.id, version: pack.version, description: pack.description },
-      contributions: Object.fromEntries(
-        CONTRIBUTION_KINDS.map((kind) => [kind, contributions[kind].map((entry) => entry.id)])
-      ),
+      contributions: {
+        ...Object.fromEntries(
+          CONTRIBUTION_KINDS.map((kind) => [kind, contributions[kind].map((entry) => entry.id)])
+        ),
+        hooks: pack.hooks.map((hook) => hook.id),
+      },
     },
   });
+}
+
+/**
+ * Adopting a workflow should not be all or nothing. Disabling names a single
+ * contribution, and naming one the pack does not have is an error rather than a
+ * silent no-op — a typo here would otherwise look like it worked.
+ */
+function disableContributions(pack, disable, file) {
+  if (!disable.length) {
+    return pack;
+  }
+
+  const available = new Set([
+    ...CONTRIBUTION_KINDS.flatMap((kind) =>
+      pack.contributions[kind].map((entry) => `${kind.slice(0, -1)}.${entry.id}`)),
+    ...pack.hooks.map((hook) => `hook.${hook.id}`),
+  ]);
+
+  for (const id of disable) {
+    if (!available.has(id)) {
+      fail(
+        `Cannot disable "${id}": ${pack.id} does not contribute it. It contributes ${[...available].sort().join(", ")}.`,
+        { file }
+      );
+    }
+  }
+
+  const removed = new Set(disable);
+
+  return {
+    ...pack,
+    contributions: Object.fromEntries(CONTRIBUTION_KINDS.map((kind) => [
+      kind,
+      pack.contributions[kind].filter((entry) => !removed.has(`${kind.slice(0, -1)}.${entry.id}`)),
+    ])),
+    hooks: pack.hooks.filter((hook) => !removed.has(`hook.${hook.id}`)),
+    scripts: pack.scripts.filter((script) =>
+      pack.hooks.some((hook) => hook.run === script.name && !removed.has(`hook.${hook.id}`))),
+  };
+}
+
+/**
+ * Hook scripts a pack ships are materialized like any other generated source,
+ * but they must arrive executable: npm does not reliably preserve the mode of
+ * files inside a published tarball.
+ */
+function materializeHookScripts(pack, generatedRoot, root) {
+  const relativeRoot = path.relative(root, generatedRoot);
+  const provided = new Map();
+
+  const files = pack.scripts.map((script) => {
+    const relative = path.join(relativeRoot, "hooks", script.name);
+    const absolute = path.join(root, relative);
+
+    provided.set(absolute, { content: script.contents, mode: 0o755 });
+
+    return { path: relative, contents: script.contents, mode: 0o755 };
+  });
+
+  return { files, provided };
 }
 
 function validateBlueprint(value, file) {
@@ -121,6 +218,15 @@ function validateBlueprint(value, file) {
     );
   }
 
+  for (const id of workflow.disable ?? []) {
+    if (typeof id !== "string" || !CONTRIBUTION_ID.test(id)) {
+      fail(
+        `Invalid workflow.disable entry "${id}". Use "<kind>.<id>", for example "hook.spec-trailer".`,
+        { file }
+      );
+    }
+  }
+
   if (!Array.isArray(ai.runtimes) || !ai.runtimes.length) {
     fail('Blueprint must declare at least one runtime in "ai.runtimes"', { file });
   }
@@ -131,7 +237,13 @@ function validateBlueprint(value, file) {
     }
   }
 
-  return { project, stack, workflow, ai: { runtimes: [...new Set(ai.runtimes)] } };
+  return {
+    project,
+    stack,
+    workflow,
+    ai: { runtimes: [...new Set(ai.runtimes)] },
+    hooks: value.hooks,
+  };
 }
 
 function rejectUnknown(value, allowed, subject, file) {
@@ -166,11 +278,21 @@ async function loadPack(id) {
     })));
   }
 
+  const hooks = metadata.contributes?.hooks ?? [];
+  const scripts = await Promise.all(
+    [...new Set(hooks.map((hook) => hook.run))].map(async (name) => ({
+      name,
+      contents: await readText(path.join(directory, "hooks", name)),
+    }))
+  );
+
   return {
     id: metadata.id ?? id,
     version: metadata.version ?? 1,
     description: metadata.description ?? "",
     contributions,
+    hooks,
+    scripts,
   };
 }
 

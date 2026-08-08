@@ -48,20 +48,32 @@ first three before it stages anything.
    Only repository admins can create tags, because pushing a version tag is
    what triggers a release.
 
-8. The `Release` workflow verifies the tag, the version, the changelog, the
+8. Move the floating major tag so `uses: akin-oz/ai-engineering@v0` keeps
+   resolving. GitHub Actions consumers pin to the major, as actions
+   conventionally allow:
+
+   ```sh
+   git tag -f v0 v0.2.0
+   git push --force origin v0
+   ```
+
+   This is the one tag that moves. Every `vX.Y.Z` tag is immutable.
+
+9. The `Release` workflow verifies the tag, the version, the changelog, the
    release note, the tests, and the compiled output, then stages the release.
-9. **Approve the staged release.** Open **Staged Packages** from the user menu
-   on npmjs.com, or run `npm stage approve`, and confirm with 2FA. Nothing
-   reaches users until this step.
-10. Verify the published package in a clean temporary project: `npx aie init`
+10. **Approve the staged release.** Open **Staged Packages** from the user menu
+    on npmjs.com, or run `npm stage approve`, and confirm with 2FA. Nothing
+    reaches users until this step.
+11. Verify the published package in a clean temporary project: `npx aie init`
     followed by `npx aie sync` must produce a non-empty `CLAUDE.md` and
     `AGENTS.md`.
 
 ## If a release goes wrong
 
-Do not delete or move a published tag — releases are immutable, and rewriting
-one is exactly the attack the setup above defends against. Ship a patch release
-instead.
+Do not delete or move a published version tag — releases are immutable, and
+rewriting one is exactly the attack the setup above defends against. Ship a
+patch release instead. The floating `v0` tag is the sole exception, and it
+never points anywhere but at an already-released version tag.
 
 A staged release that should not go out can simply be left unapproved; it
 expires without ever reaching users.

@@ -84,6 +84,27 @@ recorded verbatim in the ownership record. On the next sync it replaces exactly
 those entries, leaves everything else alone, and reports an error instead of
 overwriting if one of them was hand-edited.
 
+### What the compiler owns in a shared settings file
+
+This division is deliberate and worth stating plainly, because a repository
+maintaining both halves relies on it:
+
+| Owned by the compiler | Owned by you |
+| --- | --- |
+| `hooks.*` entries generated from declared hooks | `permissions`, `env`, model and teammate settings, and every other key |
+| | Hook entries you wrote by hand, including ones for events the compiler has no vocabulary for |
+
+The compiler will not create `.claude/settings.json` at all unless the
+workspace declares a hook. A repository with zero declared hooks never has that
+file touched, which is what makes hand-wiring the parts the compiler cannot yet
+express a safe thing to do: those entries are not in any ownership record, so a
+later version will not mistake them for its own and remove them.
+
+Widening this surface — permissions, environment, MCP servers — is a future
+decision, not an oversight. Each key added is a key the compiler starts
+arbitrating, and the settings-merge machinery has to earn that one key at a
+time.
+
 ## Determinism
 
 Manifest lists are deduplicated while preserving declared order, directory

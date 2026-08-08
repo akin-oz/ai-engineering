@@ -144,3 +144,66 @@ test("codex reports that it cannot express hooks", async () => {
     assert.match(sync.stdout, /Codex has no repository hook format/);
   });
 });
+
+test("a turn-end hook compiles to the runtime's end-of-turn event", async () => {
+  await withHooks(async (repository) => {
+    await repository.write(".ai/manifest.yaml", manifest().replace(
+      "  - id: format-on-write\n    event: post-edit\n    run: hooks/format.sh",
+      "  - id: verify\n    event: turn-end\n    run: hooks/format.sh"
+    ));
+
+    const sync = repository.run("sync");
+
+    assert.equal(sync.code, 0, sync.stderr);
+
+    const settings = JSON.parse(await repository.read(".claude/settings.json"));
+
+    assert.equal(settings.hooks.Stop.length, 1);
+    assert.equal(settings.hooks.Stop[0].matcher, undefined, "an end-of-turn hook matches no tool");
+  });
+});
+
+test("a hook can name the tools it fires for", async () => {
+  await withHooks(async (repository) => {
+    await repository.write(".ai/manifest.yaml", manifest().replace(
+      "  - id: format-on-write\n    event: post-edit\n    run: hooks/format.sh",
+      "  - id: commit-guard\n    event: pre-tool\n    tools: [Bash]\n    run: hooks/format.sh"
+    ));
+
+    const sync = repository.run("sync");
+
+    assert.equal(sync.code, 0, sync.stderr);
+
+    const settings = JSON.parse(await repository.read(".claude/settings.json"));
+
+    assert.equal(settings.hooks.PreToolUse[0].matcher, "Bash");
+  });
+});
+
+test("tools are rejected where the runtime cannot act on them", async () => {
+  await withHooks(async (repository) => {
+    await repository.write(".ai/manifest.yaml", manifest().replace(
+      "    event: post-edit\n",
+      "    event: post-edit\n    tools: [Bash]\n"
+    ));
+
+    const result = repository.run("validate");
+
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /does not fire for a tool/);
+  });
+});
+
+test("a tool event without tools is rejected", async () => {
+  await withHooks(async (repository) => {
+    await repository.write(".ai/manifest.yaml", manifest().replace(
+      "    event: post-edit\n",
+      "    event: post-tool\n"
+    ));
+
+    const result = repository.run("validate");
+
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /must declare the tools it fires for/);
+  });
+});

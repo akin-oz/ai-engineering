@@ -1,6 +1,6 @@
 {
   "name": "@akinlabs/ai-engineering",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Compile tool-agnostic .ai workspaces into AI coding assistant runtimes.",
   "keywords": [
     "ai",

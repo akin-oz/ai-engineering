@@ -21,7 +21,20 @@ const RULE_METADATA_KEYS = new Set([
 
 const DOCUMENTED_RULE_KEYS = ["description", "scope"];
 
-export const HOOK_EVENTS = new Set(["pre-edit", "post-edit", "session-start", "session-end"]);
+/**
+ * The normalized hook vocabulary. `tools` says whether a declaration may name
+ * the tools it fires for: the `-edit` events are sugar with a fixed tool set,
+ * the `-tool` events exist for everything else and must name their tools.
+ */
+export const HOOK_EVENTS = {
+  "pre-edit": { tools: "forbidden" },
+  "post-edit": { tools: "forbidden" },
+  "pre-tool": { tools: "required" },
+  "post-tool": { tools: "required" },
+  "session-start": { tools: "forbidden" },
+  "session-end": { tools: "forbidden" },
+  "turn-end": { tools: "forbidden" },
+};
 
 export async function loadSourceEntries(kind, names, directory, root, diagnostics) {
   const singular = kind.slice(0, -1);
@@ -131,7 +144,12 @@ export async function reportUnusedHookScripts(hooks, directory, root, diagnostic
  * manifest with a normalized event vocabulary instead of being inferred from a
  * directory listing.
  */
-export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
+export async function loadHooks(declared, sourceRoot, root, diagnostics, file, options = {}) {
+  // Scripts a workflow pack materializes do not exist on disk yet during
+  // planning, so their contents are supplied in memory instead of read.
+  const provided = options.provided ?? new Map();
+  const seen = options.seen ?? new Set();
+
   if (declared === undefined || declared === null) {
     return [];
   }
@@ -142,7 +160,6 @@ export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
   }
 
   const hooks = [];
-  const seen = new Set();
 
   for (const entry of declared) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -164,12 +181,20 @@ export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
 
     seen.add(id);
 
-    if (!HOOK_EVENTS.has(event)) {
+    const definition = HOOK_EVENTS[event];
+
+    if (!definition) {
       diagnostics.error(
         "hook-unknown-event",
-        `Hook "${id}" declares unknown event "${event}". Supported events are ${[...HOOK_EVENTS].join(", ")}.`,
+        `Hook "${id}" declares unknown event "${event}". Supported events are ${Object.keys(HOOK_EVENTS).join(", ")}.`,
         { file }
       );
+      continue;
+    }
+
+    const tools = normalizeTools(id, event, entry.tools, definition, diagnostics, file);
+
+    if (tools === undefined) {
       continue;
     }
 
@@ -190,6 +215,23 @@ export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
       continue;
     }
 
+    const supplied = provided.get(script);
+
+    if (supplied) {
+      hooks.push({
+        id,
+        event,
+        tools,
+        run,
+        file: script,
+        relative,
+        name: path.basename(script),
+        content: supplied.content,
+        mode: supplied.mode,
+      });
+      continue;
+    }
+
     if (!(await exists(script))) {
       diagnostics.error("hook-script-missing", `Hook "${id}" script was not found`, { file: relative });
       continue;
@@ -200,6 +242,7 @@ export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
     hooks.push({
       id,
       event,
+      tools,
       run,
       file: script,
       relative,
@@ -210,6 +253,47 @@ export async function loadHooks(declared, sourceRoot, root, diagnostics, file) {
   }
 
   return hooks;
+}
+
+/**
+ * Tool names are the runtime's own vocabulary, so they are only accepted where
+ * a runtime can act on them. Returns undefined when the declaration is invalid.
+ */
+function normalizeTools(id, event, value, definition, diagnostics, file) {
+  const declared = value === undefined || value === null
+    ? []
+    : (Array.isArray(value) ? value : [value]);
+
+  if (definition.tools === "forbidden") {
+    if (declared.length) {
+      diagnostics.error(
+        "hook-tools-not-applicable",
+        `Hook "${id}" declares tools, but the "${event}" event does not fire for a tool. Use "pre-tool" or "post-tool" to match specific tools.`,
+        { file }
+      );
+      return undefined;
+    }
+
+    return [];
+  }
+
+  if (!declared.length) {
+    diagnostics.error(
+      "hook-tools-required",
+      `Hook "${id}" uses the "${event}" event, which must declare the tools it fires for, for example: tools: [Bash]`,
+      { file }
+    );
+    return undefined;
+  }
+
+  for (const tool of declared) {
+    if (typeof tool !== "string" || !tool.trim()) {
+      diagnostics.error("manifest-invalid", `Hook "${id}" tools must be non-empty strings`, { file });
+      return undefined;
+    }
+  }
+
+  return [...new Set(declared.map((tool) => tool.trim()))];
 }
 
 function isInside(directory, target) {

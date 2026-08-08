@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.3.0] - 2026-08-08
+
+Everything here comes from one repository adopting 0.2.0 and logging what it
+had to hand-wire because the compiler could not express it. Each item below is
+one of those workarounds, deleted.
+
+### Added
+
+- **Hooks in blueprint workspaces.** A `hooks:` block works in
+  `.ai/blueprint.yaml` exactly as it does in a manifest. Choosing a workflow no
+  longer forfeits the hook vocabulary, which it silently did before.
+- **`turn-end` hook event**, compiling to Claude Code's `Stop`. End-of-turn
+  verification gates were previously inexpressible.
+- **`pre-tool` and `post-tool` events with a `tools` field**, so a hook can fire
+  for the tools it actually cares about (`tools: [Bash]` for a commit guard).
+  `pre-edit` and `post-edit` remain sugar for the edit tools. Declaring `tools`
+  on an event that does not fire for a tool is an error rather than an ignored
+  field.
+- **Workflow packs can contribute hooks.** Pack scripts are materialized to
+  `.ai/generated/hooks/` and arrive executable, because npm does not reliably
+  preserve file modes in a published tarball.
+- **`workflow.disable`** drops a single pack contribution by name
+  (`disable: [hook.spec-trailer]`). Adopting a workflow is no longer all or
+  nothing. Naming a contribution the pack does not have is an error listing
+  what it does have, so a typo cannot look like it worked.
+- The `spec-driven` pack now ships the mechanism behind its own rules: a
+  `Spec:` commit trailer convention, a rule documenting it with the CI check,
+  and a hook that refuses a commit without one. The hook fails open — a hook bug
+  must never be why someone cannot commit.
+
+### Changed
+
+- **`spec-driven` is now version 2.** Blueprint users will see `aie check`
+  report drift after upgrading; run `aie sync`. Because the pack now contributes
+  a hook, it also begins merging into `.claude/settings.json` for the first
+  time. Entries you wrote by hand are preserved, as always. To keep that file
+  untouched, add `disable: [hook.spec-trailer]`.
+- `aie explain` reports the project type, gives the path a template is read from
+  instead of "source only", and lists contributed hooks.
+- A blueprint's `project` and `stack` are recorded in workflow provenance rather
+  than validated and discarded.
+- The deprecated `ai` binary now names 0.4.0 as its removal release. It was
+  announced for 0.3.0, but removing it in the same release that fixes an
+  adopter's blockers would have made upgrading harder than it needs to be.
+
+### Fixed
+
+- A floating `v0` tag now exists and moves with each release, so
+  `uses: akin-oz/ai-engineering@v0` resolves. Only exact version tags existed
+  before, and the README documented a tag that did not.
+
 ## [0.2.0] - 2026-08-04
 
 The trust release. Version 0.1 wrote its output where neither runtime reads it

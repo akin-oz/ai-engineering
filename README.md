@@ -117,10 +117,12 @@ and fails the job. It writes nothing.
 A dash means the runtime has no format for it. The compiler says so on every
 run rather than dropping the source silently.
 
-Hooks are declared in the manifest with a normalized event
-(`pre-edit`, `post-edit`, `session-start`, `session-end`) and wired into
-`.claude/settings.json` — the compiler owns only the entries it wrote there and
-preserves the rest of your settings.
+Hooks are declared with a normalized event — `pre-edit`, `post-edit`,
+`pre-tool`, `post-tool`, `session-start`, `session-end`, `turn-end` — and wired
+into `.claude/settings.json`. The `-tool` events name the tools they fire for
+(`tools: [Bash]`); the rest do not take one. The compiler owns only the entries
+it wrote there and preserves the rest of your settings; see
+[what the compiler owns in a shared settings file](docs/architecture.md#what-the-compiler-owns-in-a-shared-settings-file).
 
 ## Compiling a workflow instead of listing files
 
@@ -138,9 +140,22 @@ ai:
 ```
 
 `aie sync` composes that workflow into `.ai/generated/` — agents, rules,
-commands, and templates, committed and reviewable — then compiles it for each
-runtime. `aie explain` shows what came from where. Your own files in `.ai/`
-compile alongside it.
+commands, templates, and hooks, committed and reviewable — then compiles it for
+each runtime. `aie explain` shows what came from where. Your own rules, agents,
+commands, and hooks compile alongside the pack's, and an id declared in both
+places is an error rather than a silent override.
+
+A blueprint takes a `hooks:` block exactly like a manifest does. Adopting a
+workflow is not all or nothing either — drop a single contribution by name:
+
+```yaml
+workflow:
+  development: spec-driven
+  disable: [hook.spec-trailer]
+```
+
+Naming something the pack does not contribute is an error, so a typo cannot
+look like it worked.
 
 One workflow ships today (`spec-driven`). More arrive when this one has proven
 useful in real repositories, not before.

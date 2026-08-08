@@ -1,3 +1,4 @@
+import path from "node:path";
 import process from "node:process";
 
 import { DiagnosticError } from "../diagnostics.mjs";
@@ -208,13 +209,24 @@ applies to blueprint workspaces (.ai/blueprint.yaml).`);
 
   console.log(`workflow: ${workflow.development} (${workflow.pack.id}@${workflow.pack.version})`);
 
+  if (workflow.project?.type) {
+    console.log(`project:  ${workflow.project.type}`);
+  }
+
+  console.log("");
+
   const support = capabilitySupport(result.registry, result.manifest);
+  const generated = path.relative(result.manifest.root, result.manifest.files.generated);
 
-  for (const kind of ["agents", "rules", "commands", "templates"]) {
+  for (const kind of ["agents", "rules", "commands", "templates", "hooks"]) {
     for (const id of workflow.contributions[kind] ?? []) {
-      const targets = kind === "templates" ? ["source only"] : support[kind];
+      // A template is not compiled for a runtime; agents reach it by path, so
+      // the path is the useful thing to print.
+      const destination = kind === "templates"
+        ? [`read from ${path.join(generated, "templates", `${id}.md`)}`]
+        : support[kind] ?? [];
 
-      console.log(`  ${kind.slice(0, -1).padEnd(8)} ${id.padEnd(18)} → ${targets.join(", ")}`);
+      console.log(`  ${kind.slice(0, -1).padEnd(8)} ${id.padEnd(18)} → ${destination.join(", ")}`);
     }
   }
 
@@ -228,7 +240,7 @@ function capabilitySupport(registry, manifest) {
     && manifest.targets[adapter.id]);
   const support = {};
 
-  for (const kind of ["agents", "rules", "commands"]) {
+  for (const kind of ["agents", "rules", "commands", "hooks"]) {
     const yes = [];
     const no = [];
 

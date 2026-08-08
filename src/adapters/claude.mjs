@@ -31,12 +31,17 @@ export const capabilities = {
   hooks: "settings-merge",
 };
 
+const EDIT_TOOLS = "Edit|Write|NotebookEdit";
+
 /** Normalized events mapped to the Claude Code events that can express them. */
 const HOOK_EVENTS = {
-  "pre-edit": { event: "PreToolUse", matcher: "Edit|Write|NotebookEdit" },
-  "post-edit": { event: "PostToolUse", matcher: "Edit|Write|NotebookEdit" },
+  "pre-edit": { event: "PreToolUse", matcher: EDIT_TOOLS },
+  "post-edit": { event: "PostToolUse", matcher: EDIT_TOOLS },
+  "pre-tool": { event: "PreToolUse" },
+  "post-tool": { event: "PostToolUse" },
   "session-start": { event: "SessionStart" },
   "session-end": { event: "SessionEnd" },
+  "turn-end": { event: "Stop" },
 };
 
 export async function render(manifest, context = {}) {
@@ -119,8 +124,9 @@ function mergeSettings(hooks, directory, context, diagnostics) {
 
   for (const hook of hooks) {
     const mapping = HOOK_EVENTS[hook.event];
+    const matcher = mapping.matcher ?? (hook.tools?.length ? hook.tools.join("|") : undefined);
     const entry = {
-      ...(mapping.matcher ? { matcher: mapping.matcher } : {}),
+      ...(matcher ? { matcher } : {}),
       hooks: [{
         type: "command",
         command: `"$CLAUDE_PROJECT_DIR"/${path.join(directory, "hooks", hook.name)}`,

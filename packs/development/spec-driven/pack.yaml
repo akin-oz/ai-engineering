@@ -1,5 +1,5 @@
 id: development/spec-driven
-version: 1
+version: 2
 description: >-
   Write the spec first, implement against it, and keep each change inside the
   boundary the spec describes.
@@ -11,7 +11,15 @@ contributes:
   rules:
     - spec-first
     - change-boundary
+    - spec-trailer
   commands:
     - spec
   templates:
     - spec
+  hooks:
+    # Makes the workflow's central claim checkable rather than aspirational: a
+    # commit must say which spec it implements.
+    - id: spec-trailer
+      event: pre-tool
+      tools: [Bash]
+      run: spec-trailer.sh
