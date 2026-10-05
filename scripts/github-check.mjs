@@ -4,7 +4,12 @@
  * Runs `aie check` and turns its JSON into GitHub annotations and a job
  * summary, so drift shows up on the changed files rather than only in the log.
  *
- * Exit codes match the CLI: 0 clean, 1 out of date, 2 broken workspace.
+ * Then runs `aie audit` unless AIE_AUDIT is "off". In "warn" mode (the
+ * default) findings are annotated as warnings and never fail the job; in
+ * "fail" mode error findings are errors and the audit's exit code counts.
+ *
+ * Exit codes match the CLI: 0 clean, 1 out of date or failed audit, 2 broken
+ * workspace.
  */
 
 import { spawnSync } from "node:child_process";
@@ -17,6 +22,12 @@ const actionPath = process.env.GITHUB_ACTION_PATH
   ?? path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const bin = path.join(actionPath, "bin", "aie.mjs");
 const strict = process.env.AIE_STRICT !== "false";
+const auditMode = process.env.AIE_AUDIT || "warn";
+
+if (!["warn", "fail", "off"].includes(auditMode)) {
+  console.error(`::error::Unknown audit mode "${auditMode}". Use warn, fail, or off.`);
+  process.exit(2);
+}
 
 const result = spawnSync(
   process.execPath,
@@ -83,7 +94,38 @@ summary(lines.length
   ]
   : ["## AI Engineering Compiler", "", "✓ Generated files are up to date."]);
 
-process.exit(result.status ?? 0);
+const auditStatus = auditMode === "off" ? 0 : runAudit();
+
+process.exit(Math.max(result.status ?? 0, auditStatus));
+
+function runAudit() {
+  const audit = spawnSync(
+    process.execPath,
+    [bin, "audit", "--json", ...(strict && auditMode === "fail" ? ["--strict"] : [])],
+    { encoding: "utf8" }
+  );
+  const report = parse(audit.stdout);
+
+  if (!report?.findings) {
+    annotate(auditMode === "fail" ? "error" : "warning", `aie audit could not run: ${report?.error ?? audit.stderr}`, undefined);
+    return auditMode === "fail" ? (audit.status ?? 2) : 0;
+  }
+
+  const rows = [];
+
+  for (const finding of report.findings) {
+    const level = auditMode === "fail" && finding.severity === "error" ? "error" : "warning";
+
+    annotate(level, `${finding.code}: ${finding.message} Fix: ${finding.fix}`, finding.file);
+    rows.push(`| \`${finding.code}\` | ${finding.severity} | ${finding.file ? `\`${finding.file}\`` : ""} | ${finding.fix.replace(/\|/g, "\\|")} |`);
+  }
+
+  summary(rows.length
+    ? ["### Audit", "", "| Finding | Severity | File | Fix |", "| --- | --- | --- | --- |", ...rows]
+    : ["### Audit", "", "✓ No findings."]);
+
+  return auditMode === "fail" ? (audit.status ?? 0) : 0;
+}
 
 function annotate(level, message, file) {
   const location = file ? ` file=${file}` : "";

@@ -1,5 +1,5 @@
 name: "AI Engineering Compiler"
-description: "Fail the build when generated AI assistant instructions drift from their .ai source."
+description: "Fail the build when generated AI assistant instructions drift from their .ai source, and audit the agent configuration."
 author: "Akin Oztorun"
 
 branding:
@@ -15,6 +15,10 @@ inputs:
     description: "Treat warnings as errors."
     required: false
     default: "true"
+  audit:
+    description: "Run aie audit: warn (annotate, never fail), fail (fail the job on findings), or off."
+    required: false
+    default: "warn"
 
 runs:
   using: composite
@@ -23,9 +27,10 @@ runs:
       shell: bash
       run: npm ci --omit=dev --prefix "$GITHUB_ACTION_PATH"
 
-    - name: Check for drift
+    - name: Check for drift and audit
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
         AIE_STRICT: ${{ inputs.strict }}
+        AIE_AUDIT: ${{ inputs.audit }}
       run: node "$GITHUB_ACTION_PATH/scripts/github-check.mjs"
