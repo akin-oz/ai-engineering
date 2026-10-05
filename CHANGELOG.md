@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.1] - 2026-10-05
+
+A documentation and test release: no change to what the compiler generates.
+The threat model now reflects running with the sandbox on.
 
 ### Changed
 
