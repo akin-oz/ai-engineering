@@ -26,6 +26,10 @@
   `hook-pattern-git-global-options`, and `hook-no-ci-backstop`. Exit codes
   match `check` (0 clean, 1 findings, 2 unreadable settings), with `--json` and
   `--strict`. It reads secret files by name only, never their contents.
+- **`docs/threat-model.md`** states, per layer, what is stopped, what is not,
+  and the known limits — hooks fail open, string matching is bypassable, hooks
+  and MCP servers run outside the sandbox — with each claim tied to a test or
+  to Claude Code's documentation. A test keeps its citations from going stale.
 - **The GitHub Action audits**, through a new `audit` input: `warn` (the
   default) annotates findings without failing, `fail` fails the job, `off`
   skips it. The default does not fail existing pipelines on the floating `v0`

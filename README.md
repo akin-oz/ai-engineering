@@ -120,6 +120,10 @@ what findings do: `warn` (the default) annotates them and never fails the job,
 
 ## Auditing the agent configuration
 
+What each layer — rules, permissions, hooks, sandbox, CI — stops, what it does
+not, and where it can be walked around is in the
+[threat model](docs/threat-model.md).
+
 `aie check` proves generated files match their source; `aie audit` asks whether
 that source describes a defended repository. It reads the committed
 `.claude/settings.json`, the hook scripts it runs, `.github/workflows/`, and the
