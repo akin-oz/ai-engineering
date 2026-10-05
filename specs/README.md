@@ -25,7 +25,7 @@ moves into `docs/` and the spec's status flips to Shipped.
 | 012 | [`aie check`, dry-run, CI action](spec-012-check-dry-run-and-ci-action.md) | Shipped | 001, 005 |
 | 013 | [`aie adopt` importer](spec-013-adopt-importer.md) | Shipped | 001, 004, 005 |
 | 014 | [Cursor adapter](spec-014-cursor-adapter.md) | Shipped | 001–003, 005 |
-| 015 | [Harden the spec-trailer hook](spec-015-harden-spec-trailer-hook.md) | Implemented — ships in 0.3.1 | 009, 010 |
+| 015 | [Harden the spec-trailer hook](spec-015-harden-spec-trailer-hook.md) | Shipped | 009, 010 |
 
 Everything except the Spec 011 launch checklist is implemented and tested in the
 unreleased 0.2.0.

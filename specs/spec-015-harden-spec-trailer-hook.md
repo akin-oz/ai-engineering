@@ -1,6 +1,6 @@
 # Spec 015: Harden the spec-trailer hook
 
-- Status: **Implemented — ships in 0.3.1 (unreleased)**
+- Status: **Shipped in 0.3.1**
 - Priority: P1
 - Target release: 0.3.1
 - Depends on: Spec 009 (hook compilation), Spec 010 (workflow packs)
