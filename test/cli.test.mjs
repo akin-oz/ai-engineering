@@ -7,8 +7,8 @@ import test from "node:test";
 import packageJson from "../package.json" with { type: "json" };
 import { bin, makeWorkspace, projectRoot } from "./helpers.mjs";
 
-function runCli(args, cwd = projectRoot, command = bin) {
-  return spawnSync(process.execPath, [command, ...args], { cwd, encoding: "utf8" });
+function runCli(args, cwd = projectRoot) {
+  return spawnSync(process.execPath, [bin, ...args], { cwd, encoding: "utf8" });
 }
 
 test("CLI prints help and version", () => {
@@ -21,14 +21,6 @@ test("CLI prints help and version", () => {
   assert.match(help.stdout, /aie check/);
   assert.equal(version.status, 0);
   assert.equal(version.stdout, `${packageJson.version}\n`);
-});
-
-test("the deprecated ai command still runs and warns", () => {
-  const result = runCli(["--version"], projectRoot, path.join(projectRoot, "bin", "ai.mjs"));
-
-  assert.equal(result.status, 0);
-  assert.equal(result.stdout, `${packageJson.version}\n`);
-  assert.match(result.stderr, /deprecated/);
 });
 
 test("CLI guides users when sync runs without a workspace", async () => {

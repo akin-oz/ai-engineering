@@ -6,8 +6,8 @@
 
 - [ ] `npm test`
 - [ ] `npm run check`
-- [ ] `npx ai validate`
-- [ ] `npx ai sync`
+- [ ] `npx aie validate`
+- [ ] `npx aie sync`
 - [ ] `git diff --exit-code`
 
 ## Source of truth

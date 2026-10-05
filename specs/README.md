@@ -29,6 +29,7 @@ moves into `docs/` and the spec's status flips to Shipped.
 | 016 | [Permissions and sandbox compile](spec-016-permissions-and-sandbox.md) | Implemented — ships in 0.4.0 | 001, 009, 010 |
 | 017 | [`aie audit`](spec-017-aie-audit.md) | Implemented — ships in 0.4.0 | 012, 015, 016 |
 | 018 | [Threat model](spec-018-threat-model.md) | Implemented — ships in 0.4.0 | 015–017 |
+| 019 | [Remove the `ai` binary](spec-019-remove-ai-binary.md) | Implemented — ships in 0.4.0 | — |
 
 Everything except the Spec 011 launch checklist is implemented and tested in the
 unreleased 0.2.0.

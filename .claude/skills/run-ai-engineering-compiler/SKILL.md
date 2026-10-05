@@ -94,9 +94,8 @@ node scripts/verify-dogfood.mjs .     # this repo's own .ai/ must compile to som
   Same collision, different code: `sync` treats it as a failure to act,
   `check` treats it as a workspace that cannot be compiled. The driver
   asserts both — don't "fix" one to match the other.
-- **Deprecated `bin/ai.mjs` still exists.** It's identical to `aie` but
-  prints a deprecation warning to stderr and is removed in 0.3.0. Drive
-  `aie`, not `ai`.
+- **There is no `ai` command.** The deprecated alias was removed in 0.4.0.
+  Drive `aie`.
 - **`aie` with no command defaults to `sync`**, not help. `node
   bin/aie.mjs` alone will attempt a compile of the current directory.
 
