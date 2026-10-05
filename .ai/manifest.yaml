@@ -34,7 +34,15 @@ permissions:
 
 # Shell commands run inside Claude Code's OS sandbox, so Read deny rules and
 # the sandbox's protected paths (.claude settings and hooks) also hold for
-# cat, sed -i, cp, and the processes they start. Network starts with no
-# allowed domains; Claude Code asks before a command reaches a new host.
+# cat, sed -i, cp, and the processes they start. Claude Code asks before a
+# command reaches any host not listed here.
+#
+# GitHub is pre-allowed because every pull request needs it (gh, fetch, push).
+# The trade: a sandboxed command can now reach any repository or gist on
+# GitHub, not only this one. See docs/threat-model.md.
 sandbox:
   enabled: true
+  network:
+    allowedDomains:
+      - github.com
+      - api.github.com
