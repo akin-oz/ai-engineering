@@ -87,9 +87,12 @@ reach, and that is a repository's decision, not a workflow's.
 
 The `spec-driven` pack ships `protect-guardrails`. Its hook is only a guard if
 the agent it guards cannot edit it, or the settings entry that runs it. `Edit`
-rules cover every built-in file-editing tool; shell writes to these paths are
-covered by the sandbox's own protected paths when the sandbox is on, and by
-nothing when it is off — which is what `aie audit` (Spec 017) will report.
+rules cover every built-in file-editing tool, and Claude Code also checks a
+shell redirect's target (`> file`, `tee`) against them. Other shell writers —
+`sed -i`, `cp`, an interpreter — are stopped only by the sandbox, whose own
+protected paths include `.claude/settings.json` and `.claude/hooks/`. With the
+sandbox off they rely on the permission prompt alone, which is what `aie audit`
+(Spec 017) will report.
 
 ## Claude adapter: merging under the ownership model
 
