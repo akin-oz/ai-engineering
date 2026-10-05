@@ -152,8 +152,11 @@ machine.
 reads of `.env`, `.env.*`, `*.pem`, and `*.key`; the Codex target accepts both
 gaps, so CI stays on `--strict`, and `aie audit` reports no findings. It keeps
 the defaults for `allowUnsandboxedCommands` (retries allowed, with approval)
-and `failIfUnavailable` (unsandboxed if the sandbox cannot start), and
-pre-allows no network hosts.
+and `failIfUnavailable` (unsandboxed if the sandbox cannot start). It
+pre-allows `github.com` and `api.github.com`, because every pull request needs
+them. That is a real widening: a sandboxed command can reach any repository or
+gist on GitHub, so a secret a command could read would have somewhere to go.
+The `Read` deny rules are what keep the obvious secrets out of reach.
 
 ## MCP servers
 
@@ -203,6 +206,7 @@ Each row is either a test in this repository or a citation above.
 | read `.env` with the Read tool | permissions, when a `Read` deny rule covers it; `aie audit` reports when none does | `test/audit.test.mjs` |
 | `cat .env` in a shell | sandbox, when on and a `Read` deny rule covers it (both are true in this repository); otherwise nothing | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | push to an arbitrary host from a shell | sandbox network proxy, when on: no host is allowed until someone approves it | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| push to someone else's GitHub repository or a gist from a shell | not stopped in this repository: `github.com` is pre-allowed; `Read` deny rules keep the obvious secrets from being read first | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | add a server to `.mcp.json` under `enableAllProjectMcpServers` | `aie audit` (`mcp-auto-approve`), in CI | `test/audit.test.mjs` |
 | hand-remove a compiled deny rule | `aie sync` refuses (`settings-entry-modified`) | `test/permissions.test.mjs` |
 | a deny rule that Codex silently ignores | `--strict` fails (`permissions-unsupported`) | `test/permissions.test.mjs` |
