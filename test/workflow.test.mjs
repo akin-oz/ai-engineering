@@ -185,7 +185,7 @@ test("a single pack contribution can be disabled", async () => {
   await withBlueprint(async (repository) => {
     await repository.write(".ai/blueprint.yaml", BLUEPRINT.replace(
       "  development: spec-driven",
-      "  development: spec-driven\n  disable: [hook.spec-trailer, rule.change-boundary]"
+      "  development: spec-driven\n  disable: [hook.spec-trailer, permission.protect-guardrails, rule.change-boundary]"
     ));
 
     const sync = repository.run("sync");
@@ -194,12 +194,80 @@ test("a single pack contribution can be disabled", async () => {
     assert.equal(
       await repository.exists(".claude/settings.json"),
       false,
-      "with its only hook disabled the pack must not touch settings.json"
+      "with its hook and its permissions disabled the pack must not touch settings.json"
     );
     assert.equal(await repository.exists(".ai/generated/hooks/spec-trailer.sh"), false);
     assert.equal(await repository.exists(".ai/generated/rules/change-boundary.md"), false);
     assert.equal(await repository.exists(".ai/generated/rules/spec-first.md"), true);
     assert.doesNotMatch(await repository.read("CLAUDE.md"), /## Rule: change-boundary/);
+  });
+});
+
+test("the pack denies edits to the guardrails it installs", async () => {
+  await withBlueprint(async (repository) => {
+    const sync = repository.run("sync", "--json");
+
+    assert.equal(sync.code, 0, sync.stderr);
+
+    const settings = JSON.parse(await repository.read(".claude/settings.json"));
+
+    assert.deepEqual(settings.permissions.deny, [
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/hooks/**)",
+      "Edit(./.ai/generated/**)",
+    ]);
+
+    const codes = JSON.parse(sync.stdout).diagnostics.map((entry) => entry.code);
+
+    assert.ok(codes.includes("permissions-unsupported"), "Codex cannot enforce the pack's deny rules, and says so");
+  });
+});
+
+test("a pack permission group can be disabled on its own", async () => {
+  await withBlueprint(async (repository) => {
+    await repository.write(".ai/blueprint.yaml", BLUEPRINT.replace(
+      "  development: spec-driven",
+      "  development: spec-driven\n  disable: [permission.protect-guardrails]"
+    ));
+
+    const sync = repository.run("sync");
+
+    assert.equal(sync.code, 0, sync.stderr);
+
+    const settings = JSON.parse(await repository.read(".claude/settings.json"));
+
+    assert.equal(settings.permissions, undefined);
+    assert.equal(settings.hooks.PreToolUse.length, 1, "the hook is still installed");
+  });
+});
+
+test("a blueprint declares permissions and sandbox alongside the pack's", async () => {
+  await withBlueprint(async (repository) => {
+    await repository.write(".ai/blueprint.yaml", `${BLUEPRINT}
+permissions:
+  allow: ["Bash(npm test)", "Edit(./.claude/hooks/**)"]
+  deny: ["Read(./.env)"]
+sandbox:
+  enabled: true
+`);
+
+    const sync = repository.run("sync", "--json");
+
+    assert.equal(sync.code, 0, sync.stderr);
+
+    const settings = JSON.parse(await repository.read(".claude/settings.json"));
+
+    assert.deepEqual(settings.permissions, {
+      allow: ["Bash(npm test)"],
+      deny: [
+        "Edit(./.claude/settings.json)",
+        "Edit(./.claude/hooks/**)",
+        "Edit(./.ai/generated/**)",
+        "Read(./.env)",
+      ],
+    }, "the pack's deny wins over the blueprint's allow");
+    assert.deepEqual(settings.sandbox, { enabled: true });
+    assert.ok(JSON.parse(sync.stdout).diagnostics.some((entry) => entry.code === "permission-conflict"));
   });
 });
 
