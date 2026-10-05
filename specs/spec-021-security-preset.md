@@ -1,6 +1,6 @@
 # Spec 021: A `security: hardened` preset
 
-- Status: **In progress**
+- Status: **Implemented — ships in 0.6.0 (unreleased)**
 - Priority: P1
 - Target release: 0.6.0
 - Depends on: Spec 016 (permissions, sandbox), Spec 017 (`aie audit`), Spec 020 (`accept`)

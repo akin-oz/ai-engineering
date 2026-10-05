@@ -87,7 +87,7 @@ never modifies the originals. `--write` applies the plan. See
 
 | Command | Behavior | Exit codes |
 | --- | --- | --- |
-| `aie init` | Create a `.ai` workspace with a starter rule | 0 |
+| `aie init` | Create a `.ai` workspace with a starter rule (`--secure` adds the hardened security preset) | 0 |
 | `aie adopt` | Import existing assistant files (dry run by default) | 0 |
 | `aie sync` | Compile enabled targets | 0, 1 on failure |
 | `aie check` | Report drift without writing | 0 clean, 1 drift, 2 broken workspace |
@@ -173,6 +173,25 @@ to live with a gap, accept it for that target (`accept:
 [permissions-unsupported]` under `targets.codex`, or `ai.accept.codex` in a
 blueprint): it still prints, as info, and `--strict` passes. This repository
 does exactly that for its own deny rules.
+
+### One line for a hardened setup
+
+```yaml
+security: hardened
+```
+
+in `.ai/manifest.yaml` or `.ai/blueprint.yaml` denies the agent's file tools
+any read of `.env`, `.env.*`, `*.pem`, and `*.key`, and turns on Claude Code's
+sandbox, so the same rules bind shell commands. Your own `permissions` and
+`sandbox` blocks still apply on top: pre-allow the hosts your project needs
+under `sandbox.network.allowedDomains`. Setting `sandbox.enabled: false`
+alongside the preset is an error rather than a silent override. The preset
+expands when you sync, so a release that improves it reaches your workspace on
+the next `aie sync`, and the changelog names every change.
+
+`aie init --secure` starts a workspace with the preset and accepts the Codex
+gaps in the file, visibly, so the first sync passes `--strict` and
+`aie audit` comes back clean. This repository uses the preset itself.
 
 ## Compiling a workflow instead of listing files
 

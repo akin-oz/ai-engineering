@@ -47,6 +47,10 @@ trust ([settings](https://code.claude.com/docs/en/settings)).
   gap once someone has decided to live with it: the diagnostic still prints on
   every run, as info, and an acceptance nothing reports any more warns as
   `accept-unused` (`test/accept.test.mjs`).
+- `security: hardened` denies reads of exactly the files `aie audit` reports
+  as `secret-readable` and turns the sandbox on, in one line
+  (`test/security.test.mjs`). It is a starting point, not a boundary of its
+  own: a secret under any other name needs its own rule.
 - The `spec-driven` pack's `protect-guardrails` group denies edits to
   `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/**`,
   and `.ai/generated/**`, so the session a hook guards cannot edit the hook,
@@ -160,8 +164,8 @@ repository allows may still be refused on one developer's machine, and the
 compiled `.claude/settings.json` cannot show it. `aie audit` reads only the
 repository's file, so it cannot see this either.
 
-**In this repository:** `.ai/manifest.yaml` enables the sandbox and denies
-reads of `.env`, `.env.*`, `*.pem`, and `*.key`; the Codex target accepts both
+**In this repository:** `.ai/manifest.yaml` uses `security: hardened`, which
+enables the sandbox and denies reads of `.env`, `.env.*`, `*.pem`, and `*.key`; the Codex target accepts both
 gaps, so CI stays on `--strict`, and `aie audit` reports no findings. It keeps
 the defaults for `allowUnsandboxedCommands` (retries allowed, with approval)
 and `failIfUnavailable` (unsandboxed if the sandbox cannot start).

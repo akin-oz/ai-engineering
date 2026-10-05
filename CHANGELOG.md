@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`security: hardened`**, a one-line preset for `.ai/manifest.yaml` or
+  `.ai/blueprint.yaml`. It denies the agent's file tools any read of `.env`,
+  `.env.*`, `*.pem`, and `*.key`, and enables Claude Code's sandbox. Your own
+  `permissions` and `sandbox` blocks still apply on top, deny still wins, and
+  contradicting the preset (`sandbox.enabled: false`) is an error. The preset
+  expands at sync time, so later improvements reach existing workspaces; every
+  change to it will be listed here.
+- **`aie init --secure`** starts a workspace with the preset and accepts the
+  Codex gaps in the file, so the first sync passes `--strict` and `aie audit`
+  reports no findings for a manifest workspace.
+- `aie audit` fixes for `deny-empty`, `sandbox-disabled`, and
+  `secret-readable` point at `security: hardened`.
+
+### Changed
+
+- This repository's own manifest uses `security: hardened`; its compiled
+  settings are byte-identical to the explicit rules it replaced.
+
 ## [0.5.1] - 2026-10-05
 
 A documentation and test release: no change to what the compiler generates.

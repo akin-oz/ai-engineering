@@ -139,6 +139,12 @@ sandbox:
     allowedDomains: [registry.npmjs.org]
 ```
 
+A workspace can also name a security preset, `security: hardened`, which
+adds `Read(.env)`, `Read(.env.*)`, `Read(*.pem)`, `Read(*.key)` to `deny` and
+`enabled: true` to `sandbox` before adapters run. Adapters see only the result
+in `manifest.permissions` and `manifest.sandbox`; there is nothing preset-specific
+to handle.
+
 `permissions` accepts `allow` and `deny` only. Rule strings are the runtime's
 own vocabulary and are passed through as written. A rule in both lists is
 dropped from `allow` with a `permission-conflict` warning — deny wins.

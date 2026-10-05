@@ -41,6 +41,16 @@ const AGENTS_TEMPLATE = `<!-- aie:note {{RULES}} and {{AGENTS}} are replaced wit
 {{AGENTS}}
 `;
 
+const SECURE = `
+# Deny the agent's file tools any read of secret files, and run its shell
+# commands inside Claude Code's OS sandbox. See docs/threat-model.md.
+security: hardened
+`;
+
+// Codex cannot enforce permission rules or sandbox settings. Accepting the gaps
+// keeps --strict usable; remove a line to be warned on every run instead.
+const CODEX_ACCEPT = "    accept: [permissions-unsupported, sandbox-unsupported]";
+
 const BLUEPRINT = `schema: 2
 
 project:
@@ -79,8 +89,8 @@ export async function initializeWorkspace(root, options = {}) {
   }
 
   const entry = options.blueprint
-    ? { file: "blueprint.yaml", contents: BLUEPRINT }
-    : { file: "manifest.yaml", contents: MANIFEST };
+    ? { file: "blueprint.yaml", contents: options.secure ? secureBlueprint() : BLUEPRINT }
+    : { file: "manifest.yaml", contents: options.secure ? secureManifest() : MANIFEST };
   const workspaceFile = path.join(sourceRoot, entry.file);
   const other = path.join(sourceRoot, options.blueprint ? "manifest.yaml" : "blueprint.yaml");
 
@@ -119,6 +129,22 @@ export async function initializeWorkspace(root, options = {}) {
   }
 
   return { created, existingRuntimeFiles: await findRuntimeFiles(projectRoot) };
+}
+
+function secureManifest() {
+  return MANIFEST.replace(
+    "  codex:\n    enabled: true\n",
+    `  codex:\n    enabled: true\n    # Codex cannot enforce the security preset; accepted so --strict passes.\n${CODEX_ACCEPT}\n`
+  ) + SECURE;
+}
+
+function secureBlueprint() {
+  return BLUEPRINT.replace(
+    "  runtimes: [claude, codex]\n",
+    "  runtimes: [claude, codex]\n" +
+    "  # Codex cannot enforce the security preset; accepted so --strict passes.\n" +
+    "  accept:\n    codex: [permissions-unsupported, sandbox-unsupported]\n"
+  ) + SECURE;
 }
 
 async function findRuntimeFiles(projectRoot) {

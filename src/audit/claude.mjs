@@ -54,7 +54,7 @@ function denyEmpty({ settings }) {
   return [finding("deny-empty", "warning", {
     message: "permissions.deny is empty, so the model is only ever asked, never refused.",
     file: settings ? SETTINGS : undefined,
-    fix: 'Declare deny rules, starting with secrets: "Read(./.env)", "Read(./.env.*)", "Read(**/*.pem)", "Read(**/*.key)".',
+    fix: 'Add "security: hardened" to .ai/manifest.yaml or .ai/blueprint.yaml, or declare deny rules yourself, starting with secrets: "Read(.env)", "Read(.env.*)", "Read(*.pem)", "Read(*.key)".',
   })];
 }
 
@@ -66,7 +66,7 @@ function sandboxDisabled({ settings }) {
   return [finding("sandbox-disabled", "warning", {
     message: "The Bash sandbox is not enabled. Edit and Read rules stop Claude's file tools, not shell commands such as sed -i, cp, or curl.",
     file: settings ? SETTINGS : undefined,
-    fix: 'Set "sandbox": { "enabled": true } and restrict filesystem and network access from there.',
+    fix: 'Add "security: hardened" to .ai/manifest.yaml or .ai/blueprint.yaml, or set "sandbox": { "enabled": true } and restrict filesystem and network access from there.',
   })];
 }
 
@@ -91,7 +91,7 @@ function secretReadable({ settings, files }) {
     .map((file) => finding("secret-readable", "error", {
       message: `${file} looks like a secret and no Read deny rule covers it.`,
       file,
-      fix: `Add "Read(./${file})" to permissions.deny, or a pattern that covers it.`,
+      fix: `Add "Read(./${file})" to permissions.deny, or a pattern that covers it. "security: hardened" covers .env, .env.*, *.pem, and *.key.`,
     }));
 }
 
