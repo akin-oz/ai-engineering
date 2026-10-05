@@ -122,7 +122,8 @@ settings under the same ownership rules as permissions, unknown keys warn
 (`sandbox-unknown-key`), and Codex and Cursor report that they cannot express
 it (`sandbox-unsupported`), which a target can accept the same way as a
 permissions gap. Packs never turn the sandbox on — that changes what every
-command can reach, and it is the repository's decision.
+command can reach, and it is the repository's decision. A repository makes it
+in one line with `security: hardened` (below).
 
 **What it costs:** the sandbox's protected paths are not limited to settings.
 They include `.claude/agents/`, `.claude/commands/`, `.claude/skills/`, and
@@ -181,6 +182,50 @@ widening: a sandboxed command holding any GitHub token, including one planted
 in a file or a prompt, can create a gist or write to a repository through the
 API. The `Read` deny rules are what keep the obvious secrets out of reach.
 
+## The `security: hardened` preset
+
+Not a layer of its own: one line in `.ai/manifest.yaml` or `.ai/blueprint.yaml`
+that turns on the permissions and sandbox layers together. `aie init --secure`
+starts a workspace with it.
+
+**What it turns on:** `Read` deny rules for `.env`, `.env.*`, `*.pem`, and
+`*.key` — exactly the files `aie audit` reports as `secret-readable` — and
+`sandbox.enabled: true`, so those rules and the sandbox's protected paths also
+bind shell commands (`test/security.test.mjs`).
+
+**What the compiler guarantees:**
+
+- A workspace's own `permissions` and `sandbox` blocks still apply on top.
+  Permission rules are unioned (pack groups, then the preset, then the
+  workspace) and deny still wins (`permission-conflict`).
+- Contradicting the preset, such as `sandbox.enabled: false` next to it, is an
+  error rather than a silent override, so a reviewer never has to guess which
+  of two answers won.
+- The preset does not accept Codex or Cursor gaps on a project's behalf. Those
+  targets still warn (`permissions-unsupported`, `sandbox-unsupported`) until
+  someone accepts the gap. `aie init --secure` does accept them, in the
+  generated file, with a comment, where a reviewer can see and remove it.
+- The preset expands at sync time. A release that changes it changes every
+  workspace that names it on the next `aie sync`, `aie check` reports the drift
+  until then, and the changelog names every change.
+
+**Does not cover:**
+
+- Secrets under any other name: `config/credentials.json`, a token in a
+  `.yaml`, a key without a `.key` extension. Each needs its own `Read` rule.
+- The network beyond the sandbox's default. It pre-allows no hosts; a project
+  adds the ones it needs under `sandbox.network.allowedDomains`, and each one
+  widens what a sandboxed command can reach.
+- Anything the sandbox does not cover: Claude's own file and web tools follow
+  permission rules only, and hooks and MCP servers run outside it.
+- A machine where the sandbox cannot run: on native Windows, or wherever it
+  fails to start and `failIfUnavailable` is not set, shell commands run
+  unsandboxed and only the file-tool `Read` rules still hold.
+
+**Known limits:** `aie audit` reads the committed settings, so it reports when
+the preset's rules are missing there; it cannot confirm that a given session's
+sandbox actually started.
+
 ## MCP servers
 
 Not compiled. `enableAllProjectMcpServers: true` approves any server added to
@@ -224,10 +269,11 @@ Each row is either a test in this repository or a citation above.
 | a commit with `Spec:` only in prose | CI trailer check | `test/trailer-ci.test.mjs` |
 | edit `.claude/hooks/spec-trailer.sh` with the edit tool | permissions (`protect-guardrails`) | `test/workflow.test.mjs` |
 | set `disableAllHooks` in `.claude/settings.local.json` with the edit tool | permissions (`protect-guardrails`) | `test/workflow.test.mjs` |
-| `sed -i` on `.claude/settings.json` | sandbox protected paths, when the sandbox is on (it is in this repository); otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
-| write instructions into `.claude/agents/` or `.git/hooks/` from a shell | sandbox protected paths, when the sandbox is on; otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| `sed -i` on `.claude/settings.json` | sandbox protected paths, when the sandbox is on (`security: hardened` turns it on, as in this repository); otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| write instructions into `.claude/agents/` or `.git/hooks/` from a shell | sandbox protected paths, when the sandbox is on (`security: hardened` turns it on); otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | read `.env` with the Read tool | permissions, when a `Read` deny rule covers it; `aie audit` reports when none does | `test/audit.test.mjs` |
-| `cat .env` in a shell | sandbox, when on and a `Read` deny rule covers it (both are true in this repository); otherwise nothing | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| `cat .env` in a shell | sandbox, when on and a `Read` deny rule covers it (`security: hardened` provides both, as in this repository); otherwise nothing | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| read a secret stored under another name, such as `config/credentials.json` | not stopped by `security: hardened`, which covers four filename patterns; needs its own `Read` rule | `test/security.test.mjs` |
 | push to an arbitrary host from a shell | sandbox network proxy, when on: no host is allowed until someone approves it | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | `git push` from a shell in this repository | sandbox: the SSH agent is unreachable and `github.com` is not allowed, so it needs an approved unsandboxed retry and an agent confirmation | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | write to someone else's repository or a gist through GitHub's API, with a token the command holds | not stopped in this repository: `api.github.com` is pre-allowed; `Read` deny rules keep the obvious secrets from being read first | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
