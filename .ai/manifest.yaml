@@ -6,9 +6,10 @@ targets:
 
   codex:
     enabled: true
-    # Codex has no repository permission rules. The deny rules below hold in
-    # Claude Code only; this is a known gap, accepted so CI can stay --strict.
-    accept: [permissions-unsupported]
+    # Codex has no repository permission rules or sandbox settings. The deny
+    # rules and the sandbox below hold in Claude Code only; these are known
+    # gaps, accepted so CI can stay --strict.
+    accept: [permissions-unsupported, sandbox-unsupported]
 
 agents:
   - principal-architect
@@ -23,11 +24,17 @@ rules:
 commands: []
 
 # Secrets are never read by the agent's file tools. Bare names match at any
-# depth. Shell reads (cat .env) are not covered unless the sandbox is on; see
-# docs/threat-model.md.
+# depth. With the sandbox on, the same rules also bind shell commands.
 permissions:
   deny:
     - Read(.env)
     - Read(.env.*)
     - Read(*.pem)
     - Read(*.key)
+
+# Shell commands run inside Claude Code's OS sandbox, so Read deny rules and
+# the sandbox's protected paths (.claude settings and hooks) also hold for
+# cat, sed -i, cp, and the processes they start. Network starts with no
+# allowed domains; Claude Code asks before a command reaches a new host.
+sandbox:
+  enabled: true

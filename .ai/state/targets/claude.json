@@ -18,6 +18,9 @@
           "Read(*.pem)",
           "Read(*.key)"
         ]
+      },
+      "sandbox": {
+        "enabled": true
       }
     }
   }
