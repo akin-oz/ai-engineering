@@ -168,7 +168,11 @@ it wrote there and preserves the rest of your settings; see
 file under the same rules: an entry you already had is never claimed, a value
 you set is never overwritten, and a rule in both lists is denied. A runtime
 that cannot enforce them warns on every run, so `--strict` fails rather than
-letting a deny rule hold in one tool and not another.
+letting a deny rule hold in one tool and not another. Once you have decided
+to live with a gap, accept it for that target (`accept:
+[permissions-unsupported]` under `targets.codex`, or `ai.accept.codex` in a
+blueprint): it still prints, as info, and `--strict` passes. This repository
+does exactly that for its own deny rules.
 
 ## Compiling a workflow instead of listing files
 

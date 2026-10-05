@@ -6,6 +6,19 @@
     ".claude/agents/principal-architect.md",
     ".claude/agents/security.md",
     ".claude/agents/staff-engineer.md",
+    ".claude/settings.json",
     "CLAUDE.md"
-  ]
+  ],
+  "merged": {
+    ".claude/settings.json": {
+      "permissions": {
+        "deny": [
+          "Read(.env)",
+          "Read(.env.*)",
+          "Read(*.pem)",
+          "Read(*.key)"
+        ]
+      }
+    }
+  }
 }

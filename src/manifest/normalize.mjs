@@ -2,6 +2,13 @@ import path from "node:path";
 
 import { fail } from "../diagnostics.mjs";
 
+/**
+ * The diagnostics a target may accept: facts about what a runtime cannot
+ * express. Mistakes — a hand-edited entry, a collision, a typo — are never
+ * acceptable, because accepting them would hide the mistake.
+ */
+export const ACCEPTABLE_CODES = ["capability-unsupported", "permissions-unsupported", "sandbox-unsupported"];
+
 export function normalizeTargets(targets, root) {
   return Object.fromEntries(Object.entries(targets).map(([id, target]) => {
     const configuredOutput = target.output ?? `.${id}`;
@@ -23,8 +30,29 @@ export function normalizeTargets(targets, root) {
       fail(`Target "${id}" output must stay inside the project root`);
     }
 
-    return [id, { ...target, output }];
+    return [id, { ...target, output, accept: normalizeAccept(id, target.accept) }];
   }));
+}
+
+function normalizeAccept(id, accept) {
+  if (accept === undefined || accept === null) {
+    return [];
+  }
+
+  if (!Array.isArray(accept)) {
+    fail(`Target "${id}" accept must be a list of codes. Codes that can be accepted: ${ACCEPTABLE_CODES.join(", ")}.`);
+  }
+
+  for (const code of accept) {
+    if (!ACCEPTABLE_CODES.includes(code)) {
+      fail(
+        `Cannot accept "${code}" for target "${id}": only capability gaps can be accepted. ` +
+        `Codes that can be accepted: ${ACCEPTABLE_CODES.join(", ")}.`
+      );
+    }
+  }
+
+  return [...new Set(accept)];
 }
 
 export function createFileMap(root, sourceRoot, targets) {
