@@ -28,6 +28,7 @@ moves into `docs/` and the spec's status flips to Shipped.
 | 015 | [Harden the spec-trailer hook](spec-015-harden-spec-trailer-hook.md) | Implemented — ships in 0.3.1 | 009, 010 |
 | 016 | [Permissions and sandbox compile](spec-016-permissions-and-sandbox.md) | Implemented — ships in 0.4.0 | 001, 009, 010 |
 | 017 | [`aie audit`](spec-017-aie-audit.md) | Implemented — ships in 0.4.0 | 012, 015, 016 |
+| 018 | [Threat model](spec-018-threat-model.md) | Implemented — ships in 0.4.0 | 015–017 |
 
 Everything except the Spec 011 launch checklist is implemented and tested in the
 unreleased 0.2.0.
