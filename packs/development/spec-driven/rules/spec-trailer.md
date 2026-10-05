@@ -40,9 +40,13 @@ that actually exist.
 To check the same rule in CI, for every commit a pull request adds:
 
 ```sh
-git log --format='%H %(trailers:key=Spec,valueonly,separator=%x2C)' origin/main..HEAD |
-  awk 'NF < 2 { print "Commit " $1 " has no Spec: trailer"; bad = 1 } END { exit bad }'
+commits=$(git log --format='%H %(trailers:key=Spec,valueonly,separator=%x2C)' origin/main..HEAD) || exit 1
+printf '%s\n' "$commits" |
+  awk 'NF == 1 { print "Commit " $1 " has no Spec: trailer"; bad = 1 } END { exit bad }'
 ```
+
+`git log` runs on its own first: piped straight into `awk`, a failure such as a
+missing `origin/main` would produce no output and pass.
 
 Keep the trailer accurate when a change outgrows its spec. A commit claiming
 `Spec: 004` while implementing something 004 never described is worse than no

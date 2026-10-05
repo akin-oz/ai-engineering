@@ -104,11 +104,15 @@ fail-open paths.
 The rule's snippet changes to read trailers the way git does, per commit:
 
 ```sh
-git log --format='%H %(trailers:key=Spec,valueonly,separator=%x2C)' origin/main..HEAD |
-  awk 'NF < 2 { print "Commit " $1 " has no Spec: trailer"; bad = 1 } END { exit bad }'
+commits=$(git log --format='%H %(trailers:key=Spec,valueonly,separator=%x2C)' origin/main..HEAD) || exit 1
+printf '%s\n' "$commits" |
+  awk 'NF == 1 { print "Commit " $1 " has no Spec: trailer"; bad = 1 } END { exit bad }'
 ```
 
-Every commit in the range must carry the trailer, not just one of them.
+Every commit in the range must carry the trailer, not just one of them, and a
+`git log` that fails (no `origin/main`) fails the check instead of producing no
+output and passing. `test/trailer-ci.test.mjs` runs the snippet exactly as the
+rule prints it.
 
 ## Known limits (stay out of scope, documented)
 

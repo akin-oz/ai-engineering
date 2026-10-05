@@ -70,6 +70,11 @@ const ATTEMPTS = [
   ["bypass 1: xargs", "echo x | xargs git commit -m", BLOCK],
   ["bypass 1: git in a variable", "$GIT commit -m \"Add x\"", BLOCK],
   ["bypass 1: subcommand in a variable", "git $SUB -m \"Add x\"", BLOCK],
+  ["bypass 1: substitution inside ${...}", "echo ${X:-$(git commit -m \"Add x\")}", BLOCK],
+  ["bypass 1: backticks inside ${...}", "echo ${X:-`git commit -m x`}", BLOCK],
+  ["bypass 1: bash -o pipefail -c", "bash -o pipefail -c 'git commit -m \"Add x\"'", BLOCK],
+  ["bypass 1: bash --norc -c", "bash --norc -c 'git commit -m \"Add x\"'", BLOCK],
+  ["a plain ${...} expansion is not a commit", "echo ${HOME:-/tmp}", ALLOW],
   ["bypass 1: python os.system", "python3 -c \"import os; os.system('git commit -m x')\"", BLOCK],
   ["bypass 1: node child_process", "node -e \"require('child_process').execSync('git commit -m x')\"", BLOCK],
 

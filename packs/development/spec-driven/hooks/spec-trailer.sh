@@ -334,8 +334,18 @@ function readDollar(lexer, out, depth, word) {
     out.push(...inner);
     word.text += staticOutput(inner) ?? UNKNOWN;
   } else if (next === "{") {
-    const end = s.indexOf("}", lexer.i);
+    // `${X:-$(git commit)}` runs the substitution inside, so the operand is
+    // read word by word for substitutions; its value is still unknown.
+    const end = closingBrace(s, lexer.i + 1);
     if (end < 0) throw new Refusal(UNREADABLE_COMMAND);
+    const inner = { source: s.slice(lexer.i + 2, end), i: 0, pending: [] };
+    while (inner.i < inner.source.length) {
+      if (" \t\n;&|()<>".includes(inner.source[inner.i])) {
+        inner.i++;
+      } else {
+        readWord(inner, out, depth + 1);
+      }
+    }
     lexer.i = end + 1;
     word.text += UNKNOWN;
   } else if (/[A-Za-z_]/.test(next)) {
@@ -349,6 +359,25 @@ function readDollar(lexer, out, depth, word) {
     word.text += "$";
     lexer.i++;
   }
+}
+
+function closingBrace(s, open) {
+  let depth = 0;
+
+  for (let k = open; k < s.length; k++) {
+    if (s[k] === "\\") {
+      k++;
+    } else if (s[k] === "\x27") {
+      const end = s.indexOf("\x27", k + 1);
+      if (end < 0) return -1;
+      k = end;
+    } else if (s[k] === "{") {
+      depth++;
+    } else if (s[k] === "}" && --depth === 0) {
+      return k;
+    }
+  }
+  return -1;
 }
 
 function readBackticks(lexer, out, depth, word) {
@@ -454,11 +483,20 @@ function inspect(command, cwd, depth) {
   return null;
 }
 
+// The script a shell runs with -c, past options such as `-o pipefail` and
+// `--norc`. A first operand that is not an option is a script file, unread.
 function shellScript(words, start) {
   for (let k = start; k < words.length; k++) {
     const text = words[k].text;
-    if (!/^-[A-Za-z]+$/.test(text)) return null;
-    if (text.includes("c")) return words[k + 1] ?? null;
+    if (/^[-+][oO]$/.test(text) || text === "--rcfile" || text === "--init-file") {
+      k++;
+    } else if (text.startsWith("--")) {
+      continue;
+    } else if (/^[-+][A-Za-z]+$/.test(text)) {
+      if (text.startsWith("-") && text.includes("c")) return words[k + 1] ?? null;
+    } else {
+      return null;
+    }
   }
   return null;
 }
