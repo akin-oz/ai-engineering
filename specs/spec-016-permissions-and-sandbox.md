@@ -1,6 +1,6 @@
 # Spec 016: Compile permissions and sandbox settings
 
-- Status: **Implemented — ships in 0.4.0 (unreleased)**
+- Status: **Shipped in 0.4.0**
 - Priority: P1
 - Target release: 0.4.0
 - Depends on: Spec 001 (ownership), Spec 009 (settings merge), Spec 010 (packs)

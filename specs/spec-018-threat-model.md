@@ -1,6 +1,6 @@
 # Spec 018: Threat model
 
-- Status: **Implemented — ships in 0.4.0 (unreleased)**
+- Status: **Shipped in 0.4.0**
 - Priority: P2
 - Target release: 0.4.0
 - Depends on: Specs 015, 016, 017
