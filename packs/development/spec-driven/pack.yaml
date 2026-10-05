@@ -1,5 +1,5 @@
 id: development/spec-driven
-version: 2
+version: 3
 description: >-
   Write the spec first, implement against it, and keep each change inside the
   boundary the spec describes.
@@ -23,3 +23,12 @@ contributes:
       event: pre-tool
       tools: [Bash]
       run: spec-trailer.sh
+  permissions:
+    # The hook above is only a guard if the agent it guards cannot rewrite it,
+    # or the settings entry that runs it. Edit rules cover every built-in
+    # file-editing tool; shell writes are the sandbox's job.
+    - id: protect-guardrails
+      deny:
+        - Edit(./.claude/settings.json)
+        - Edit(./.claude/hooks/**)
+        - Edit(./.ai/generated/**)

@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.4.0] - Unreleased
+
+### Added
+
+- **`permissions` and `sandbox` compile into `.claude/settings.json`.** Both
+  workspace styles accept a `permissions` block (`allow`, `deny`) and a
+  `sandbox` block using Claude Code's setting names. They merge under the same
+  ownership model as hooks: the compiler owns only the entries it added, never
+  claims an entry the file already had, never overwrites a value you set
+  (`settings-value-conflict`), and stops on a hand edit to one of its own
+  entries (`settings-entry-modified`).
+- **Deny wins.** A rule declared in both `allow` and `deny`, from any mix of
+  pack and workspace, is left out of `allow` with a `permission-conflict`
+  warning.
+- **Codex and Cursor say what they cannot enforce**, with
+  `permissions-unsupported` and `sandbox-unsupported` warnings, so `--strict`
+  fails when a declared policy holds in one runtime and not another.
+- `sandbox-unknown-key` warns on a sandbox key Claude Code does not document.
+- **Packs can contribute permission groups**, disabled one at a time with
+  `workflow.disable: [permission.<id>]`.
+
+### Changed
+
+- The `spec-driven` pack (now version 3) ships `protect-guardrails`, denying
+  edits to `.claude/settings.json`, `.claude/hooks/**`, and
+  `.ai/generated/**`, so the session its commit hook guards cannot edit the
+  hook away. Blueprint workspaces get these deny rules on their next sync, and
+  a Codex target now reports that it cannot enforce them. Opt out with
+  `disable: [permission.protect-guardrails]`.
+- `aie explain` lists permission groups, and treats an adapter that does not
+  declare a `permissions` capability as unable to enforce them.
+- Adapter contract: `capabilities` gains `permissions` and `sandbox`, and the
+  manifest passed to `render` carries `permissions` and `sandbox`.
+
 ## [0.3.1] - Unreleased
 
 0.3.0 was tagged but never reached npm, so this is the first release to carry

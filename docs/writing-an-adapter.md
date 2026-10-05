@@ -30,6 +30,8 @@ export const capabilities = {
   agents: "unsupported",
   commands: "unsupported",
   hooks: "unsupported",
+  permissions: "unsupported",
+  sandbox: "unsupported",
 };
 ```
 

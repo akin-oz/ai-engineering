@@ -55,6 +55,8 @@ export function finalizeManifest({
   files,
   generated = [],
   workflow,
+  permissions = { allow: [], deny: [] },
+  sandbox = {},
 }) {
   return deepFreeze({
     version,
@@ -68,6 +70,8 @@ export function finalizeManifest({
     files,
     generated,
     workflow,
+    permissions,
+    sandbox,
     resolve: {
       agent: (name) => path.join(files.agents, `${name}.md`),
       rule: (name) => path.join(files.rules, `${name}.md`),

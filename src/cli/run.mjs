@@ -218,7 +218,7 @@ applies to blueprint workspaces (.ai/blueprint.yaml).`);
   const support = capabilitySupport(result.registry, result.manifest);
   const generated = path.relative(result.manifest.root, result.manifest.files.generated);
 
-  for (const kind of ["agents", "rules", "commands", "templates", "hooks"]) {
+  for (const kind of ["agents", "rules", "commands", "templates", "hooks", "permissions"]) {
     for (const id of workflow.contributions[kind] ?? []) {
       // A template is not compiled for a runtime; agents reach it by path, so
       // the path is the useful thing to print.
@@ -240,12 +240,14 @@ function capabilitySupport(registry, manifest) {
     && manifest.targets[adapter.id]);
   const support = {};
 
-  for (const kind of ["agents", "rules", "commands", "hooks"]) {
+  for (const kind of ["agents", "rules", "commands", "hooks", "permissions"]) {
     const yes = [];
     const no = [];
 
     for (const adapter of enabled) {
-      const capability = adapter.capabilities?.[kind] ?? "native";
+      // An adapter written before a policy kind existed cannot be enforcing it.
+      const fallback = kind === "permissions" ? "unsupported" : "native";
+      const capability = adapter.capabilities?.[kind] ?? fallback;
 
       (capability === "unsupported" ? no : yes).push(adapter.id);
     }

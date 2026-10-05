@@ -19,6 +19,8 @@ export const capabilities = {
   agents: "native",
   commands: "unsupported",
   hooks: "unsupported",
+  permissions: "unsupported",
+  sandbox: "unsupported",
 };
 
 export async function render(manifest, context) {
@@ -95,6 +97,12 @@ Optional map describing what the runtime can express (`native`, `inline`,
 otherwise act on it. Declaring `unsupported` does not excuse silence — emit a
 `capability-unsupported` diagnostic for each affected source.
 
+`permissions` and `sandbox` default to `unsupported` when an adapter does not
+declare them, since an adapter written before they existed cannot be enforcing
+them. An adapter that cannot enforce declared rules emits
+`permissions-unsupported` or `sandbox-unsupported` as a **warning**: a policy
+that holds in one runtime and not another is a gap, not a missing convenience.
+
 ## Manifest fields available to adapters
 
 - `root`, `sourceRoot` — absolute paths.
@@ -105,11 +113,40 @@ otherwise act on it. Declaring `unsupported` does not excuse silence — emit a
   the parsed frontmatter.
 - `sources.hooks` — `{ id, event, tools, name, relative, content, mode }` for
   each declared hook. See the event vocabulary below.
+- `permissions` — `{ allow, deny }`, each a list of rule strings, deduplicated
+  in declaration order (pack groups first). A rule declared in both lists has
+  already been removed from `allow`.
+- `sandbox` — the declared sandbox mapping, or `{}`. The core checks only that
+  it holds JSON values; the key names are the adapter's to validate.
 - `workflow` — present only for blueprint workspaces: the workflow name, the
   pack that produced the sources, and what it contributed.
 - `resolve.directory(id)` — the target's output directory, relative to root.
 - `resolve.output(id)` — the same directory, absolute.
 - `files` — resolved source directories.
+
+## Permissions and sandbox
+
+Declared in either `.ai/manifest.yaml` or `.ai/blueprint.yaml`:
+
+```yaml
+permissions:
+  allow: ["Bash(npm test)"]
+  deny: ["Read(./.env)", "Read(./.env.*)"]
+
+sandbox:
+  enabled: true
+  network:
+    allowedDomains: [registry.npmjs.org]
+```
+
+`permissions` accepts `allow` and `deny` only. Rule strings are the runtime's
+own vocabulary and are passed through as written. A rule in both lists is
+dropped from `allow` with a `permission-conflict` warning — deny wins.
+
+The Claude adapter merges both blocks into `.claude/settings.json` under the
+ownership rules in [architecture](architecture.md#what-the-compiler-owns-in-a-shared-settings-file),
+and warns with `sandbox-unknown-key` for a sandbox key Claude Code does not
+document. Codex and Cursor cannot express either block and say so.
 
 ## Hook events
 

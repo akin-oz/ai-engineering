@@ -108,11 +108,11 @@ and fails the job. It writes nothing.
 
 ## Supported runtimes
 
-| Runtime | Rules | Agents | Commands | Hooks |
-| --- | --- | --- | --- | --- |
-| Claude Code | `CLAUDE.md` | `.claude/agents/` | `.claude/commands/` | `.claude/hooks/` + `settings.json` |
-| Codex | `AGENTS.md` | inlined | — | — |
-| Cursor | `.cursor/rules/*.mdc` | — | — | — |
+| Runtime | Rules | Agents | Commands | Hooks | Permissions, sandbox |
+| --- | --- | --- | --- | --- | --- |
+| Claude Code | `CLAUDE.md` | `.claude/agents/` | `.claude/commands/` | `.claude/hooks/` + `settings.json` | `settings.json` |
+| Codex | `AGENTS.md` | inlined | — | — | — |
+| Cursor | `.cursor/rules/*.mdc` | — | — | — | — |
 
 A dash means the runtime has no format for it. The compiler says so on every
 run rather than dropping the source silently.
@@ -123,6 +123,12 @@ into `.claude/settings.json`. The `-tool` events name the tools they fire for
 (`tools: [Bash]`); the rest do not take one. The compiler owns only the entries
 it wrote there and preserves the rest of your settings; see
 [what the compiler owns in a shared settings file](docs/architecture.md#what-the-compiler-owns-in-a-shared-settings-file).
+
+`permissions` (`allow`, `deny`) and `sandbox` blocks compile into the same
+file under the same rules: an entry you already had is never claimed, a value
+you set is never overwritten, and a rule in both lists is denied. A runtime
+that cannot enforce them warns on every run, so `--strict` fails rather than
+letting a deny rule hold in one tool and not another.
 
 ## Compiling a workflow instead of listing files
 
@@ -141,7 +147,10 @@ ai:
 
 `aie sync` composes that workflow into `.ai/generated/` — agents, rules,
 commands, templates, and hooks, committed and reviewable — then compiles it for
-each runtime. `aie explain` shows what came from where. Your own rules, agents,
+each runtime. The `spec-driven` pack also denies the agent edits to the
+guardrails it installs (`.claude/settings.json`, `.claude/hooks/`,
+`.ai/generated/`), so its commit hook cannot be switched off by the session it
+guards. `aie explain` shows what came from where. Your own rules, agents,
 commands, and hooks compile alongside the pack's, and an id declared in both
 places is an error rather than a silent override.
 
@@ -151,7 +160,7 @@ workflow is not all or nothing either — drop a single contribution by name:
 ```yaml
 workflow:
   development: spec-driven
-  disable: [hook.spec-trailer]
+  disable: [hook.spec-trailer, permission.protect-guardrails]
 ```
 
 Naming something the pack does not contribute is an error, so a typo cannot

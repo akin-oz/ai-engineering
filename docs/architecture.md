@@ -79,10 +79,11 @@ directories left empty by that removal are pruned. A directory containing
 anything else is never touched.
 
 Some files are shared rather than owned outright. `.claude/settings.json`
-belongs to the user; the compiler owns only the hook entries it wrote there,
-recorded verbatim in the ownership record. On the next sync it replaces exactly
-those entries, leaves everything else alone, and reports an error instead of
-overwriting if one of them was hand-edited.
+belongs to the user; the compiler owns only the entries it wrote there — hook
+entries, permission rules, sandbox values — recorded verbatim in the ownership
+record. On the next sync it replaces exactly those entries, leaves everything
+else alone, and reports an error instead of overwriting if one of them was
+hand-edited.
 
 ### What the compiler owns in a shared settings file
 
@@ -91,16 +92,33 @@ maintaining both halves relies on it:
 
 | Owned by the compiler | Owned by you |
 | --- | --- |
-| `hooks.*` entries generated from declared hooks | `permissions`, `env`, model and teammate settings, and every other key |
-| | Hook entries you wrote by hand, including ones for events the compiler has no vocabulary for |
+| `hooks.*` entries generated from declared hooks | `env`, `permissions.ask`, `permissions.defaultMode`, model and teammate settings, MCP settings, and every other key |
+| `permissions.allow` and `permissions.deny` entries it added from declared permissions | Hook entries and permission rules you wrote by hand, including ones the workspace also declares |
+| `sandbox` values and list entries it added from a declared `sandbox` block | `sandbox` values you set, even where the workspace declares a different one |
+
+Two rules keep that division honest:
+
+- **An entry the file already had is never claimed.** If you wrote
+  `Read(./.env)` into `permissions.deny` before the workspace declared it, the
+  compiler does not add a second copy, does not record it as owned, and so never
+  removes it later.
+- **A value you set is never overwritten.** If `sandbox.enabled` is `false` in
+  the file and the workspace declares `true`, the file keeps `false` and the sync
+  reports `settings-value-conflict` — a warning, so `--strict` fails on a
+  compiled policy weaker than its source.
+
+A hand edit to an entry the compiler owns — a removed deny rule, a changed
+sandbox value — reports `settings-entry-modified` and stops the sync before
+anything is written. Restore the entry, or remove it from `.ai/`.
 
 The compiler will not create `.claude/settings.json` at all unless the
-workspace declares a hook. A repository with zero declared hooks never has that
-file touched, which is what makes hand-wiring the parts the compiler cannot yet
-express a safe thing to do: those entries are not in any ownership record, so a
-later version will not mistake them for its own and remove them.
+workspace declares a hook, a permission rule, or a sandbox setting. A repository
+that declares none never has that file touched, which is what makes hand-wiring
+the parts the compiler cannot yet express a safe thing to do: those entries are
+not in any ownership record, so a later version will not mistake them for its
+own and remove them.
 
-Widening this surface — permissions, environment, MCP servers — is a future
+Widening this surface further — environment, MCP servers — is a future
 decision, not an oversight. Each key added is a key the compiler starts
 arbitrating, and the settings-merge machinery has to earn that one key at a
 time.
