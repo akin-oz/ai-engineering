@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.3.1] - Unreleased
+
+### Fixed
+
+- **The `spec-driven` pack's `spec-trailer` hook could be walked around.** It
+  matched substrings of the raw command, so `git -C dir commit`,
+  `git -c key=value commit`, extra whitespace, quoting, and `$GIT commit` were
+  not recognized as commits; a message containing `--amend` or `--no-edit`
+  skipped the check; and `Spec:` anywhere in the command, including the subject
+  line or a shell comment, counted as a trailer. The hook now reads the command
+  the way a shell does, finds git wherever it runs (after global options, inside
+  `$(...)`, behind `env`, `xargs`, `sh -c`, or `eval`), reads the message out of
+  `-m`, `-F`, here-documents, and reused commits, and asks
+  `git interpret-trailers` whether a `Spec:` trailer is present. Trailers now
+  mean what git means by them: the last paragraph of the message.
+- The hook refuses a commit whose message it cannot read without running
+  something (a variable, a generated message, a pipe), and one handed to
+  another interpreter (`python -c`, `node -e`), with instructions to write the
+  message literally. It still fails open when it breaks: no node, no git, or a
+  malformed payload allows the commit.
+- The rule's CI snippet checks every commit in the range for a git trailer,
+  using `%(trailers:key=Spec)`. The previous snippet passed when any one commit
+  had a line starting with `Spec:` anywhere in its body.
+
+### Known limits
+
+- Git aliases (`git ci` for `commit`), scripts that commit, and other
+  indirection the hook cannot see are not caught. The CI check is the backstop.
+- A command that only mentions git, such as `echo git commit`, is treated as a
+  commit and may be refused.
+
 ## [0.3.0] - 2026-08-08
 
 Everything here comes from one repository adopting 0.2.0 and logging what it

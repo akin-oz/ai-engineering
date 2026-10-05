@@ -1,6 +1,6 @@
 # Spec 015: Harden the spec-trailer hook
 
-- Status: **In progress**
+- Status: **Implemented — ships in 0.3.1 (unreleased)**
 - Priority: P1
 - Target release: 0.3.1
 - Depends on: Spec 009 (hook compilation), Spec 010 (workflow packs)
@@ -14,8 +14,10 @@
 decisions, and each one is wrong in a different direction:
 
 1. **Is this a commit?** `*"git commit"*` requires the literal substring. It
-   misses `git -C dir commit`, `git -c key=value commit`, `/usr/bin/git commit`,
-   and `git  commit` (two spaces). Every one of those commits unchecked.
+   misses `git -C dir commit`, `git -c key=value commit`, `git  commit` (two
+   spaces), `g"i"t commit`, and `$GIT commit`. Every one of those commits
+   unchecked. (`/usr/bin/git commit` was reported too, but it contains the
+   substring and was already caught; the table keeps a row for it anyway.)
 2. **Does the commit reuse an existing message?** `*--amend*|*--no-edit*`
    matches anywhere, so a commit whose *message* mentions `--amend` skips the
    guard entirely.
@@ -90,6 +92,13 @@ Every internal failure allows the commit, and each is tested:
 The `sh` wrapper blocks only when the program prints an explicit decision. A
 crash prints nothing, so it cannot block.
 
+That makes a crash a bypass, so the inputs that control the program must not be
+able to cause one. The parser recurses into substitutions and `sh -c` scripts,
+and recursion deep enough would overflow the stack; nesting past 32 levels is
+therefore refused as unreadable instead of being allowed to crash. Only the
+environment (node, git, the payload Claude Code sends) can trigger the
+fail-open paths.
+
 ### CI check
 
 The rule's snippet changes to read trailers the way git does, per commit:
@@ -128,7 +137,8 @@ committed failing before the fix.
 
 ## Done when
 
-- Every row in the adversarial table passes on Node 20, 22, and 24.
+- Every row in the adversarial table passes on Node 20, 22, and 24, under both
+  bash-as-`sh` (macOS) and dash (Debian and Ubuntu, where CI runs).
 - The 0.3.0 bypasses (1–3 above) each have at least one row that fails against
   the 0.3.0 script.
 - Each fail-open path has a row.
