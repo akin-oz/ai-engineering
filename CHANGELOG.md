@@ -62,7 +62,7 @@
   3 and adds deny rules to `.claude/settings.json`; `aie check` reports drift
   until you sync.
 
-## [0.3.1] - Unreleased
+## [0.3.1] - 2026-10-05
 
 0.3.0 was tagged but never reached npm, so this is the first release to carry
 its changes; they are listed here rather than under a version npm does not
