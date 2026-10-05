@@ -37,12 +37,13 @@ permissions:
 # cat, sed -i, cp, and the processes they start. Claude Code asks before a
 # command reaches any host not listed here.
 #
-# GitHub is pre-allowed because every pull request needs it (gh, fetch, push).
-# The trade: a sandboxed command can now reach any repository or gist on
-# GitHub, not only this one. See docs/threat-model.md.
+# Only GitHub's API is pre-allowed, for gh. Git itself uses SSH through the
+# 1Password agent, which the sandbox cannot reach, so every fetch and push
+# needs an approved unsandboxed retry and a 1Password confirmation. That is
+# deliberate. The trade: a sandboxed command can still reach GitHub's API with
+# any token it holds. See docs/threat-model.md.
 sandbox:
   enabled: true
   network:
     allowedDomains:
-      - github.com
       - api.github.com
