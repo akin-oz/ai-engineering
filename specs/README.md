@@ -25,14 +25,14 @@ moves into `docs/` and the spec's status flips to Shipped.
 | 012 | [`aie check`, dry-run, CI action](spec-012-check-dry-run-and-ci-action.md) | Shipped | 001, 005 |
 | 013 | [`aie adopt` importer](spec-013-adopt-importer.md) | Shipped | 001, 004, 005 |
 | 014 | [Cursor adapter](spec-014-cursor-adapter.md) | Shipped | 001–003, 005 |
-| 015 | [Harden the spec-trailer hook](spec-015-harden-spec-trailer-hook.md) | Implemented — ships in 0.3.1 | 009, 010 |
-| 016 | [Permissions and sandbox compile](spec-016-permissions-and-sandbox.md) | Implemented — ships in 0.4.0 | 001, 009, 010 |
-| 017 | [`aie audit`](spec-017-aie-audit.md) | Implemented — ships in 0.4.0 | 012, 015, 016 |
-| 018 | [Threat model](spec-018-threat-model.md) | Implemented — ships in 0.4.0 | 015–017 |
-| 019 | [Remove the `ai` binary](spec-019-remove-ai-binary.md) | Implemented — ships in 0.4.0 | — |
+| 015 | [Harden the spec-trailer hook](spec-015-harden-spec-trailer-hook.md) | Shipped | 009, 010 |
+| 016 | [Permissions and sandbox compile](spec-016-permissions-and-sandbox.md) | Shipped | 001, 009, 010 |
+| 017 | [`aie audit`](spec-017-aie-audit.md) | Shipped | 012, 015, 016 |
+| 018 | [Threat model](spec-018-threat-model.md) | Shipped | 015–017 |
+| 019 | [Remove the `ai` binary](spec-019-remove-ai-binary.md) | Shipped | — |
 
-Everything except the Spec 011 launch checklist is implemented and tested in the
-unreleased 0.2.0.
+Specs 001–014 shipped in 0.2.0, 015 in 0.3.1, and 016–019 in 0.4.0. The only
+unfinished item is the Spec 011 launch checklist.
 
 ## Why one release instead of four
 
