@@ -62,7 +62,7 @@ export async function plan(options = {}) {
       );
     }
 
-    for (const diagnostic of result.diagnostics ?? []) {
+    for (const diagnostic of accept(manifest, adapter.id, result.diagnostics ?? [])) {
       diagnostics.push({ target: adapter.id, ...diagnostic });
     }
 
@@ -76,6 +76,40 @@ export async function plan(options = {}) {
   diagnostics.throwIfFailed({ strict: options.strict });
 
   return { manifest, registry, diagnostics, targets };
+}
+
+/**
+ * A target may accept capability gaps it has decided to live with. An accepted
+ * diagnostic keeps its code and still prints, as info; an acceptance that no
+ * diagnostic uses is reported, so it cannot outlive its reason.
+ */
+function accept(manifest, id, diagnostics) {
+  const accepted = manifest.targets[id]?.accept ?? [];
+  const used = new Set();
+  const result = diagnostics.map((diagnostic) => {
+    if (!accepted.includes(diagnostic.code)) {
+      return diagnostic;
+    }
+
+    used.add(diagnostic.code);
+
+    return {
+      ...diagnostic,
+      severity: "info",
+      accepted: true,
+      message: `${diagnostic.message} Accepted for target "${id}".`,
+    };
+  });
+
+  for (const code of accepted.filter((item) => !used.has(item))) {
+    result.push({
+      severity: "warning",
+      code: "accept-unused",
+      message: `Target "${id}" accepts "${code}", but nothing reported it. Remove it from accept.`,
+    });
+  }
+
+  return result;
 }
 
 export async function inspect(options = {}) {

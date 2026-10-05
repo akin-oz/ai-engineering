@@ -6,6 +6,9 @@ targets:
 
   codex:
     enabled: true
+    # Codex has no repository permission rules. The deny rules below hold in
+    # Claude Code only; this is a known gap, accepted so CI can stay --strict.
+    accept: [permissions-unsupported]
 
 agents:
   - principal-architect
@@ -18,3 +21,13 @@ rules:
   - docs
 
 commands: []
+
+# Secrets are never read by the agent's file tools. Bare names match at any
+# depth. Shell reads (cat .env) are not covered unless the sandbox is on; see
+# docs/threat-model.md.
+permissions:
+  deny:
+    - Read(.env)
+    - Read(.env.*)
+    - Read(*.pem)
+    - Read(*.key)

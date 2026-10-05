@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0] - Unreleased
+
+### Added
+
+- **A target can accept a capability gap.** `accept: [permissions-unsupported]`
+  under a manifest target, or `ai.accept.<runtime>` in a blueprint, turns that
+  target's `permissions-unsupported`, `sandbox-unsupported`, or
+  `capability-unsupported` diagnostic into info marked `accepted`, so
+  `--strict` passes once the gap is a known decision. It still prints on every
+  run. Only capability gaps can be accepted, and an accepted code the target
+  never reports warns as `accept-unused`.
+- This repository declares deny rules for secret files in its own manifest and
+  accepts the Codex gap, keeping CI on `--strict`.
+
 ## [0.4.0] - 2026-10-05
 
 ### Added

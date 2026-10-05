@@ -1,6 +1,6 @@
 # Spec 020: Accept a target's capability gaps
 
-- Status: **In progress**
+- Status: **Implemented — ships in 0.5.0 (unreleased)**
 - Priority: P2
 - Target release: 0.5.0
 - Depends on: Spec 005 (diagnostics, `--strict`), Spec 016 (`permissions-unsupported`)

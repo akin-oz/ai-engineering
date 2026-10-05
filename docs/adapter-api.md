@@ -148,6 +148,26 @@ ownership rules in [architecture](architecture.md#what-the-compiler-owns-in-a-sh
 and warns with `sandbox-unknown-key` for a sandbox key Claude Code does not
 document. Codex and Cursor cannot express either block and say so.
 
+## Accepting a capability gap
+
+A target can accept a gap it has decided to live with:
+
+```yaml
+targets:
+  codex:
+    enabled: true
+    accept: [permissions-unsupported]
+```
+
+In a blueprint the same list goes under `ai.accept.<runtime>`. Only
+`capability-unsupported`, `permissions-unsupported`, and `sandbox-unsupported`
+can be accepted; any other code is an error. An accepted diagnostic keeps its
+code, prints as `info` with `accepted: true` in `--json`, and no longer fails
+`--strict`. Acceptance applies to that target only. A code a target accepts but
+never reports produces `accept-unused`, so an acceptance cannot outlive its
+reason. Adapters do nothing for this; the compiler applies it to whatever an
+enabled adapter returns.
+
 ## Hook events
 
 Hooks are declared with a normalized event, in either `.ai/manifest.yaml` or

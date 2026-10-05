@@ -19,7 +19,7 @@ const STACK_KEYS = new Set(["language", "runtime"]);
 const WORKFLOW_KEYS = new Set(["development", "disable"]);
 
 const CONTRIBUTION_ID = /^(agent|rule|command|template|hook|permission)\.[a-z0-9][a-z0-9-]*$/;
-const AI_KEYS = new Set(["runtimes"]);
+const AI_KEYS = new Set(["runtimes", "accept"]);
 
 const PROJECT_TYPES = new Set(["library", "saas", "cli", "research", "monorepo"]);
 
@@ -50,7 +50,10 @@ export async function loadBlueprint(root, options = {}) {
   );
 
   const targets = normalizeTargets(
-    Object.fromEntries(blueprint.ai.runtimes.map((runtime) => [runtime, { enabled: true }])),
+    Object.fromEntries(blueprint.ai.runtimes.map((runtime) => [
+      runtime,
+      { enabled: true, ...(blueprint.ai.accept[runtime] ? { accept: blueprint.ai.accept[runtime] } : {}) },
+    ])),
     root
   );
   const files = createFileMap(root, sourceRoot, targets);
@@ -254,11 +257,27 @@ function validateBlueprint(value, file) {
     project,
     stack,
     workflow,
-    ai: { runtimes: [...new Set(ai.runtimes)] },
+    ai: { runtimes: [...new Set(ai.runtimes)], accept: validateAccept(ai, file) },
     hooks: value.hooks,
     permissions: value.permissions,
     sandbox: normalizeSandbox(value.sandbox, file),
   };
+}
+
+function validateAccept(ai, file) {
+  const accept = ai.accept ?? {};
+
+  if (!isObject(accept)) {
+    fail('Blueprint "ai.accept" must map a runtime to the codes it accepts', { file });
+  }
+
+  for (const runtime of Object.keys(accept)) {
+    if (!ai.runtimes.includes(runtime)) {
+      fail(`Blueprint "ai.accept" names "${runtime}", which is not in ai.runtimes`, { file });
+    }
+  }
+
+  return accept;
 }
 
 function rejectUnknown(value, allowed, subject, file) {
