@@ -31,9 +31,9 @@ moves into `docs/` and the spec's status flips to Shipped.
 | 018 | [Threat model](spec-018-threat-model.md) | Shipped | 015–017 |
 | 019 | [Remove the `ai` binary](spec-019-remove-ai-binary.md) | Shipped | — |
 | 020 | [Accept a target's capability gaps](spec-020-accept-capability-gaps.md) | Shipped | 005, 016 |
-| 021 | [`security: hardened` preset](spec-021-security-preset.md) | Implemented — ships in 0.6.0 | 016, 017, 020 |
+| 021 | [`security: hardened` preset](spec-021-security-preset.md) | Shipped | 016, 017, 020 |
 
-Specs 001–014 shipped in 0.2.0, 015 in 0.3.1, 016–019 in 0.4.0, and 020 in 0.5.0. The only
+Specs 001–014 shipped in 0.2.0, 015 in 0.3.1, 016–019 in 0.4.0, 020 in 0.5.0, and 021 in 0.6.0. The only
 unfinished item is the Spec 011 launch checklist.
 
 ## Why one release instead of four
