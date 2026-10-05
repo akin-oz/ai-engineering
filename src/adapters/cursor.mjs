@@ -14,6 +14,8 @@ export const capabilities = {
   agents: "unsupported",
   commands: "unsupported",
   hooks: "unsupported",
+  permissions: "unsupported",
+  sandbox: "unsupported",
 };
 
 const DESCRIPTION_LIMIT = 100;
@@ -48,6 +50,26 @@ export async function render(manifest) {
       code: "capability-unsupported",
       message: `Cursor has no repository hook format, so the hook "${hook.id}" is not generated for this target.`,
       file: hook.relative,
+    });
+  }
+
+  // Warnings, not info: a policy one runtime enforces and another ignores is
+  // a gap in the repository's defenses, and --strict must be able to fail on it.
+  const rules = (manifest.permissions?.allow.length ?? 0) + (manifest.permissions?.deny.length ?? 0);
+
+  if (rules) {
+    diagnostics.push({
+      severity: "warning",
+      code: "permissions-unsupported",
+      message: `Cursor has no repository permission rules, so ${rules} declared permission rule(s) are not enforced for this target.`,
+    });
+  }
+
+  if (Object.keys(manifest.sandbox ?? {}).length) {
+    diagnostics.push({
+      severity: "warning",
+      code: "sandbox-unsupported",
+      message: "Cursor cannot express the declared sandbox settings, so they are not enforced for this target.",
     });
   }
 

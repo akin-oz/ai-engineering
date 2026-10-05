@@ -8,16 +8,17 @@ import { createDiagnostics, fail } from "../diagnostics.mjs";
 import { listMarkdown, readText } from "../filesystem.mjs";
 import { describeSource, loadHooks } from "./sources.mjs";
 import { createFileMap, finalizeManifest, normalizeTargets } from "./normalize.mjs";
+import { combinePermissions, normalizePermissions, normalizeSandbox } from "./policy.mjs";
 
 const BLUEPRINT_VERSION = 2;
 const PACKS = fileURLToPath(new URL("../../packs/", import.meta.url));
 
-const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai", "hooks"]);
+const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai", "hooks", "permissions", "sandbox"]);
 const PROJECT_KEYS = new Set(["type"]);
 const STACK_KEYS = new Set(["language", "runtime"]);
 const WORKFLOW_KEYS = new Set(["development", "disable"]);
 
-const CONTRIBUTION_ID = /^(agent|rule|command|template|hook)\.[a-z0-9][a-z0-9-]*$/;
+const CONTRIBUTION_ID = /^(agent|rule|command|template|hook|permission)\.[a-z0-9][a-z0-9-]*$/;
 const AI_KEYS = new Set(["runtimes"]);
 
 const PROJECT_TYPES = new Set(["library", "saas", "cli", "research", "monorepo"]);
@@ -93,6 +94,13 @@ export async function loadBlueprint(root, options = {}) {
 
   sources.hooks = [...packHooks, ...localHooks];
 
+  // Pack groups first, so a rule's first declaration decides its position.
+  const permissions = combinePermissions(
+    [...pack.permissions, normalizePermissions(blueprint.permissions, relative)],
+    diagnostics,
+    relative
+  );
+
   diagnostics.throwIfFailed();
 
   return finalizeManifest({
@@ -118,8 +126,11 @@ export async function loadBlueprint(root, options = {}) {
           CONTRIBUTION_KINDS.map((kind) => [kind, contributions[kind].map((entry) => entry.id)])
         ),
         hooks: pack.hooks.map((hook) => hook.id),
+        permissions: pack.permissions.map((group) => group.id),
       },
     },
+    permissions,
+    sandbox: blueprint.sandbox,
   });
 }
 
@@ -137,6 +148,7 @@ function disableContributions(pack, disable, file) {
     ...CONTRIBUTION_KINDS.flatMap((kind) =>
       pack.contributions[kind].map((entry) => `${kind.slice(0, -1)}.${entry.id}`)),
     ...pack.hooks.map((hook) => `hook.${hook.id}`),
+    ...pack.permissions.map((group) => `permission.${group.id}`),
   ]);
 
   for (const id of disable) {
@@ -157,6 +169,7 @@ function disableContributions(pack, disable, file) {
       pack.contributions[kind].filter((entry) => !removed.has(`${kind.slice(0, -1)}.${entry.id}`)),
     ])),
     hooks: pack.hooks.filter((hook) => !removed.has(`hook.${hook.id}`)),
+    permissions: pack.permissions.filter((group) => !removed.has(`permission.${group.id}`)),
     scripts: pack.scripts.filter((script) =>
       pack.hooks.some((hook) => hook.run === script.name && !removed.has(`hook.${hook.id}`))),
   };
@@ -243,6 +256,8 @@ function validateBlueprint(value, file) {
     workflow,
     ai: { runtimes: [...new Set(ai.runtimes)] },
     hooks: value.hooks,
+    permissions: value.permissions,
+    sandbox: normalizeSandbox(value.sandbox, file),
   };
 }
 
@@ -286,6 +301,16 @@ async function loadPack(id) {
     }))
   );
 
+  const permissions = (metadata.contributes?.permissions ?? []).map((group) => {
+    const { id: groupId, ...rules } = group ?? {};
+
+    if (typeof groupId !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(groupId)) {
+      fail(`Workflow pack "${id}" declares a permission group without a valid id`);
+    }
+
+    return { id: groupId, ...normalizePermissions(rules, `${id} pack.yaml`, `permissions.${groupId}`) };
+  });
+
   return {
     id: metadata.id ?? id,
     version: metadata.version ?? 1,
@@ -293,6 +318,7 @@ async function loadPack(id) {
     contributions,
     hooks,
     scripts,
+    permissions,
   };
 }
 
