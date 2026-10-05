@@ -25,10 +25,12 @@ contributes:
       run: spec-trailer.sh
   permissions:
     # The hook above is only a guard if the agent it guards cannot rewrite it,
-    # or the settings entry that runs it. Edit rules cover every built-in
+    # the settings entry that runs it, or a local settings file that sets
+    # disableAllHooks. Edit rules cover every built-in
     # file-editing tool; shell writes are the sandbox's job.
     - id: protect-guardrails
       deny:
         - Edit(./.claude/settings.json)
+        - Edit(./.claude/settings.local.json)
         - Edit(./.claude/hooks/**)
         - Edit(./.ai/generated/**)

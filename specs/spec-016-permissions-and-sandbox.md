@@ -76,6 +76,7 @@ contributes:
     - id: protect-guardrails
       deny:
         - Edit(./.claude/settings.json)
+        - Edit(./.claude/settings.local.json)
         - Edit(./.claude/hooks/**)
         - Edit(./.ai/generated/**)
 ```
@@ -86,7 +87,11 @@ same unknown-name error as every other disable. Packs do not contribute
 reach, and that is a repository's decision, not a workflow's.
 
 The `spec-driven` pack ships `protect-guardrails`. Its hook is only a guard if
-the agent it guards cannot edit it, or the settings entry that runs it. `Edit`
+the agent it guards cannot edit it, the settings entry that runs it, or
+`.claude/settings.local.json`, which takes precedence over the project file
+and can set `disableAllHooks: true`. Claude Code writes its own "don't ask
+again" approvals to that file directly, not through the `Edit` tool, so the
+deny does not interfere with them. `Edit`
 rules cover every built-in file-editing tool, and Claude Code also checks a
 shell redirect's target (`> file`, `tee`) against them. Other shell writers —
 `sed -i`, `cp`, an interpreter — are stopped only by the sandbox, whose own

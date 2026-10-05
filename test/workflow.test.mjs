@@ -213,6 +213,7 @@ test("the pack denies edits to the guardrails it installs", async () => {
 
     assert.deepEqual(settings.permissions.deny, [
       "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
       "Edit(./.claude/hooks/**)",
       "Edit(./.ai/generated/**)",
     ]);
@@ -261,6 +262,7 @@ sandbox:
       allow: ["Bash(npm test)"],
       deny: [
         "Edit(./.claude/settings.json)",
+        "Edit(./.claude/settings.local.json)",
         "Edit(./.claude/hooks/**)",
         "Edit(./.ai/generated/**)",
         "Read(./.env)",

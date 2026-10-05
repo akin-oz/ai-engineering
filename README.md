@@ -148,8 +148,8 @@ ai:
 `aie sync` composes that workflow into `.ai/generated/` — agents, rules,
 commands, templates, and hooks, committed and reviewable — then compiles it for
 each runtime. The `spec-driven` pack also denies the agent edits to the
-guardrails it installs (`.claude/settings.json`, `.claude/hooks/`,
-`.ai/generated/`), so its commit hook cannot be switched off by the session it
+guardrails it installs (`.claude/settings.json`,
+`.claude/settings.local.json`, `.claude/hooks/`, `.ai/generated/`), so its commit hook cannot be switched off by the session it
 guards. `aie explain` shows what came from where. Your own rules, agents,
 commands, and hooks compile alongside the pack's, and an id declared in both
 places is an error rather than a silent override.

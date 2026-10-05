@@ -24,8 +24,8 @@
 ### Changed
 
 - The `spec-driven` pack (now version 3) ships `protect-guardrails`, denying
-  edits to `.claude/settings.json`, `.claude/hooks/**`, and
-  `.ai/generated/**`, so the session its commit hook guards cannot edit the
+  edits to `.claude/settings.json`, `.claude/settings.local.json` (which can
+  set `disableAllHooks`), `.claude/hooks/**`, and `.ai/generated/**`, so the session its commit hook guards cannot edit the
   hook away. Blueprint workspaces get these deny rules on their next sync, and
   a Codex target now reports that it cannot enforce them. Opt out with
   `disable: [permission.protect-guardrails]`.
