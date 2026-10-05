@@ -9,8 +9,10 @@
   `.claude/agents/` and `.git/config`, and the network starts closed, so
   routine git work needs approved unsandboxed retries), and this repository's
   own configuration with the sandbox on.
-- `docs/threat-model.md` records that this repository pre-allows `github.com`
-  and `api.github.com` in its sandbox, and what that allows.
+- `docs/threat-model.md` records that this repository pre-allows only
+  `api.github.com` in its sandbox, what that still allows, and why git over SSH
+  through an agent the sandbox cannot reach keeps every push behind two
+  approvals.
 - Tests that create commits in temporary repositories disable commit signing,
   so a contributor's signing setup (or a sandbox that blocks its agent) cannot
   fail them.

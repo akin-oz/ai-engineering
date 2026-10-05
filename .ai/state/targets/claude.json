@@ -23,7 +23,6 @@
         "enabled": true,
         "network": {
           "allowedDomains": [
-            "github.com",
             "api.github.com"
           ]
         }
