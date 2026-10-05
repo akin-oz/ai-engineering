@@ -48,6 +48,20 @@
 - Adapter contract: `capabilities` gains `permissions` and `sandbox`, and the
   manifest passed to `render` carries `permissions` and `sandbox`.
 
+### Removed
+
+- **The deprecated `ai` command.** It has printed "will be removed in 0.4.0"
+  since 0.2.0; the package now installs `aie` only.
+
+### Migration from 0.3.x
+
+- Replace `ai` with `aie` in scripts, CI configuration, and documentation.
+  Arguments, flags, and exit codes are unchanged. Do not switch to `npx ai`:
+  on npm, `ai` is an unrelated package.
+- Blueprint workspaces: run `aie sync`. The `spec-driven` pack is now version
+  3 and adds deny rules to `.claude/settings.json`; `aie check` reports drift
+  until you sync.
+
 ## [0.3.1] - Unreleased
 
 0.3.0 was tagged but never reached npm, so this is the first release to carry

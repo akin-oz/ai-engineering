@@ -107,7 +107,9 @@ jobs:
           cd "$RUNNER_TEMP/package-smoke"
           npx aie --version
           npx aie --help
-          npx ai --version
+          # The deprecated ai alias was removed in 0.4.0. Never run "npx ai"
+          # here: on npm, "ai" is an unrelated package.
+          test ! -e node_modules/.bin/ai
       - name: A packed install must produce a usable installation
         run: |
           cd "$RUNNER_TEMP/package-smoke"

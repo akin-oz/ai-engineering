@@ -27,8 +27,7 @@
   },
   "type": "module",
   "bin": {
-    "aie": "bin/aie.mjs",
-    "ai": "bin/ai.mjs"
+    "aie": "bin/aie.mjs"
   },
   "exports": {
     ".": "./src/index.mjs"
@@ -48,7 +47,7 @@
     "access": "public"
   },
   "scripts": {
-    "check": "node --check bin/aie.mjs && node --check bin/ai.mjs && node --check src/index.mjs && node --check src/cli/run.mjs",
+    "check": "node --check bin/aie.mjs && node --check src/index.mjs && node --check src/cli/run.mjs",
     "test": "node --test",
     "verify:dogfood": "node scripts/verify-dogfood.mjs"
   },

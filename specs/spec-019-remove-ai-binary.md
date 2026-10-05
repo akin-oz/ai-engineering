@@ -1,6 +1,6 @@
 # Spec 019: Remove the deprecated `ai` binary
 
-- Status: **In progress**
+- Status: **Implemented — ships in 0.4.0 (unreleased)**
 - Priority: P3
 - Target release: 0.4.0
 - Depends on: —
