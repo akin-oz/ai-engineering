@@ -20,6 +20,16 @@
 - `sandbox-unknown-key` warns on a sandbox key Claude Code does not document.
 - **Packs can contribute permission groups**, disabled one at a time with
   `workflow.disable: [permission.<id>]`.
+- **`aie audit`** reports gaps in the committed Claude Code configuration, each
+  with a stable code and a fix: `deny-empty`, `sandbox-disabled`,
+  `mcp-auto-approve`, `secret-readable`, `no-verify-unblocked`,
+  `hook-pattern-git-global-options`, and `hook-no-ci-backstop`. Exit codes
+  match `check` (0 clean, 1 findings, 2 unreadable settings), with `--json` and
+  `--strict`. It reads secret files by name only, never their contents.
+- **The GitHub Action audits**, through a new `audit` input: `warn` (the
+  default) annotates findings without failing, `fail` fails the job, `off`
+  skips it. The default does not fail existing pipelines on the floating `v0`
+  tag.
 
 ### Changed
 

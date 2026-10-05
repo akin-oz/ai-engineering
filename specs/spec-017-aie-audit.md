@@ -1,6 +1,6 @@
 # Spec 017: `aie audit`
 
-- Status: **In progress**
+- Status: **Implemented — ships in 0.4.0 (unreleased)**
 - Priority: P1
 - Target release: 0.4.0
 - Depends on: Spec 012 (check, CI action), Spec 015 (hook), Spec 016 (permissions)

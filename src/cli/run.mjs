@@ -56,8 +56,14 @@ export async function run(argv, options = {}) {
     if (command === "adopt") {
       return await runAdopt(root, flags);
     }
+
+    if (command === "audit") {
+      return await runAudit(root, flags);
+    }
   } catch (error) {
-    return report(error, flags, command === "check" ? EXIT_WORKSPACE_ERROR : EXIT_FAILED);
+    const workspaceError = command === "check" || command === "audit";
+
+    return report(error, flags, workspaceError ? EXIT_WORKSPACE_ERROR : EXIT_FAILED);
   }
 
   return report(new Error(`Unknown command "${command}". Use "aie --help" for usage.`), flags);
@@ -261,6 +267,29 @@ function capabilitySupport(registry, manifest) {
   return support;
 }
 
+async function runAudit(root, flags) {
+  const { audit } = await import("../audit/audit.mjs");
+  const findings = await audit(root);
+  const failed = findings.some((item) => item.severity === "error" || flags.strict);
+
+  if (flags.json) {
+    console.log(JSON.stringify({ ok: true, command: "audit", findings }, null, 2));
+    return failed ? EXIT_FAILED : EXIT_OK;
+  }
+
+  for (const item of findings) {
+    const location = item.file ? ` (${item.file})` : "";
+
+    console.log(`${item.severity}: ${item.code}${location}\n  ${item.message}\n  fix: ${item.fix}\n`);
+  }
+
+  console.log(findings.length
+    ? `${findings.length} finding(s).${failed ? "" : " Run with --strict to fail on warnings."}`
+    : "No findings.");
+
+  return failed ? EXIT_FAILED : EXIT_OK;
+}
+
 async function runAdopt(root, flags) {
   const { adopt } = await import("../workspace/adopt.mjs");
   const result = await adopt(root, { write: flags.write });
@@ -447,6 +476,7 @@ Usage:
   aie check       Report whether generated artifacts are up to date
   aie validate    Validate the .ai workspace without comparing output
   aie explain     Show which workflow produced the composed sources
+  aie audit       Report gaps in the committed Claude Code configuration
   aie --help      Show this help
   aie --version   Show the installed version
 
@@ -460,6 +490,8 @@ Options:
 
 Exit codes:
   0  success
-  1  failure, or (for check) generated artifacts are out of date
-  2  the workspace could not be compiled`);
+  1  failure, (for check) generated artifacts are out of date, or (for audit)
+     an error finding, or any finding with --strict
+  2  the workspace could not be compiled, or (for audit) settings.json is not
+     valid JSON`);
 }

@@ -93,6 +93,7 @@ never modifies the originals. `--write` applies the plan. See
 | `aie check` | Report drift without writing | 0 clean, 1 drift, 2 broken workspace |
 | `aie validate` | Validate the workspace without comparing output | 0, 1 on failure |
 | `aie explain` | Show what a workflow contributed and where it lands | 0 |
+| `aie audit` | Report gaps in the committed Claude Code configuration | 0 clean, 1 error finding (any with `--strict`), 2 unreadable settings |
 
 Options: `--strict` (warnings become errors), `--force` (overwrite unowned
 files), `--write` (apply an adoption), `--blueprint`, `--dry-run`, `--json`.
@@ -105,6 +106,41 @@ files), `--write` (apply an adoption), `--blueprint`, `--dry-run`, `--json`.
 
 The action runs `aie check`, annotates the drifted files on the pull request,
 and fails the job. It writes nothing.
+
+It then runs `aie audit` and annotates each finding. The `audit` input decides
+what findings do: `warn` (the default) annotates them and never fails the job,
+`fail` fails it on error findings (on any finding while `strict` is on), and
+`off` skips the audit.
+
+```yaml
+- uses: akin-oz/ai-engineering@v0
+  with:
+    audit: fail
+```
+
+## Auditing the agent configuration
+
+`aie check` proves generated files match their source; `aie audit` asks whether
+that source describes a defended repository. It reads the committed
+`.claude/settings.json`, the hook scripts it runs, `.github/workflows/`, and the
+names — never the contents — of files under the project root. It needs no
+`.ai/` workspace and writes nothing.
+
+| Code | Severity | Finding |
+| --- | --- | --- |
+| `deny-empty` | warning | `permissions.deny` is empty |
+| `sandbox-disabled` | warning | `sandbox.enabled` is not `true` |
+| `mcp-auto-approve` | error | `enableAllProjectMcpServers` is `true` |
+| `secret-readable` | error | a `.env`, `.env.*`, `*.pem`, or `*.key` file exists and no `Read` deny rule covers it |
+| `no-verify-unblocked` | warning | the repository has git hooks and nothing denies `git commit --no-verify` / `git push --no-verify` |
+| `hook-pattern-git-global-options` | error | a hook script matches git commands as a substring, so `git -C dir commit` passes |
+| `hook-no-ci-backstop` | warning | the `spec-trailer` hook runs and no workflow re-checks `Spec:` trailers |
+
+Each finding carries a fix. `--json` prints them as `{ ok, command, findings }`.
+`.env.example`, `.env.sample`, `.env.template`, and `.env.dist` are treated as
+templates. `.claude/settings.local.json`, user settings, and managed settings
+are not read, so a finding can be resolved on your machine and still appear in
+CI.
 
 ## Supported runtimes
 

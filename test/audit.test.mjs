@@ -12,7 +12,7 @@ const SETTINGS = ".claude/settings.json";
 const DEFENDED = {
   permissions: {
     deny: [
-      "Read(./.env)",
+      "Read(.env)",
       "Read(./.env.*)",
       "Read(**/*.pem)",
       "Read(**/*.key)",
@@ -241,7 +241,7 @@ test("no-verify-unblocked stays quiet without git hooks, or when both are denied
 
     quiet("no-verify-unblocked", audit(repository));
   });
-  await withRepository({ permissions: { deny: ["Bash(git * --no-verify *)"] }, sandbox: { enabled: true } }, async (repository) => {
+  await withRepository({ permissions: { deny: ["Bash(git * --no-verify*)"] }, sandbox: { enabled: true } }, async (repository) => {
     await repository.write(".husky/pre-commit", "x\n");
 
     quiet("no-verify-unblocked", audit(repository));
