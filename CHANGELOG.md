@@ -13,6 +13,10 @@
   `api.github.com` in its sandbox, what that still allows, and why git over SSH
   through an agent the sandbox cannot reach keeps every push behind two
   approvals.
+- `docs/threat-model.md` notes that a repository's sandbox `allowedDomains` is
+  ignored when `network.strictAllowlist` is set in user, managed, or
+  `--settings` settings, so the compiled `.claude/settings.json` is not always
+  the effective policy.
 - Tests that create commits in temporary repositories disable commit signing,
   so a contributor's signing setup (or a sandbox that blocks its agent) cannot
   fail them.

@@ -148,13 +148,28 @@ Windows has no sandbox. `aie audit` reports a disabled sandbox
 (`sandbox-disabled`) but cannot see whether it actually started on a given
 machine.
 
+A repository's sandbox settings are not the effective policy. Narrowing
+entries (`Read` deny rules, `denyRead`) always apply, but widening ones can be
+ignored: when `network.strictAllowlist` is set in a developer's user settings,
+managed settings, or `--settings`, Claude Code ignores the repository's
+`allowedDomains`, and an admin-required sandbox ignores those and other
+loosening keys
+([sandboxing](https://code.claude.com/docs/en/sandboxing#locks-that-apply-without-an-admin-required-sandbox)).
+That is the right direction for a lock to fail, but it means a host the
+repository allows may still be refused on one developer's machine, and the
+compiled `.claude/settings.json` cannot show it. `aie audit` reads only the
+repository's file, so it cannot see this either.
+
 **In this repository:** `.ai/manifest.yaml` enables the sandbox and denies
 reads of `.env`, `.env.*`, `*.pem`, and `*.key`; the Codex target accepts both
 gaps, so CI stays on `--strict`, and `aie audit` reports no findings. It keeps
 the defaults for `allowUnsandboxedCommands` (retries allowed, with approval)
 and `failIfUnavailable` (unsandboxed if the sandbox cannot start).
 
-It pre-allows only `api.github.com`, which `gh` needs. Git uses an SSH remote
+It pre-allows only `api.github.com`, which `gh` needs. On a machine whose user
+settings set `strictAllowlist`, as the maintainer's do, that entry is ignored
+and `gh` is refused inside the sandbox until the developer allows the host in
+their own settings. Git uses an SSH remote
 whose key lives in an agent the sandbox cannot reach, so a sandboxed command
 cannot fetch, push, or sign: each of those needs an approved unsandboxed retry
 and then the agent's own confirmation. Allowing `api.github.com` is still a
