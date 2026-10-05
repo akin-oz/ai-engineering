@@ -26,7 +26,7 @@ async function snippet() {
 async function withRepository(run) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "ai-engineering-trailer-ci-"));
   const git = (...args) => {
-    const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", ...args], { cwd: root, encoding: "utf8" });
+    const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", ...args], { cwd: root, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
   };
 

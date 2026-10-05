@@ -115,9 +115,9 @@ before(async () => {
   };
 
   git("init", "-q");
-  git("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "--allow-empty",
+  git("-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty",
     "-m", "Without a trailer");
-  git("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "--allow-empty",
+  git("-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty",
     "-m", "With a trailer", "-m", "Spec: 015");
   await fs.writeFile(path.join(repository, "good.txt"), "Add x\n\nSpec: 015\n");
   await fs.writeFile(path.join(repository, "bad.txt"), "Add x\n\nMentions Spec: 015 in prose.\n");

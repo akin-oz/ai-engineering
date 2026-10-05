@@ -43,7 +43,10 @@ trust ([settings](https://code.claude.com/docs/en/settings)).
 - A rule in both lists is denied (`permission-conflict`).
 - Codex and Cursor cannot express permission rules, and every sync says so as
   a warning (`permissions-unsupported`), so `--strict` fails rather than
-  letting a policy hold in one tool and not another.
+  letting a policy hold in one tool and not another. A target can accept the
+  gap once someone has decided to live with it: the diagnostic still prints on
+  every run, as info, and an acceptance nothing reports any more warns as
+  `accept-unused` (`test/accept.test.mjs`).
 - The `spec-driven` pack's `protect-guardrails` group denies edits to
   `.claude/settings.json`, `.claude/settings.local.json`, `.claude/hooks/**`,
   and `.ai/generated/**`, so the session a hook guards cannot edit the hook,
@@ -113,8 +116,23 @@ filesystem policy, so with the sandbox on they bind shell commands too.
 **What the compiler guarantees:** a declared `sandbox` block merges into
 settings under the same ownership rules as permissions, unknown keys warn
 (`sandbox-unknown-key`), and Codex and Cursor report that they cannot express
-it (`sandbox-unsupported`). Packs never turn the sandbox on — that changes what
-every command can reach, and it is the repository's decision.
+it (`sandbox-unsupported`), which a target can accept the same way as a
+permissions gap. Packs never turn the sandbox on — that changes what every
+command can reach, and it is the repository's decision.
+
+**What it costs:** the sandbox's protected paths are not limited to settings.
+They include `.claude/agents/`, `.claude/commands/`, `.claude/skills/`, and
+`.git/config` and `.git/hooks`
+([sandboxing](https://code.claude.com/docs/en/sandboxing)), and the network
+starts with no allowed hosts. In this repository, with the sandbox on, that
+means `git fetch` and `git push` to GitHub over SSH are refused,
+`git worktree add` fails because checking out the tree writes
+`.claude/agents/` files, and a commit signed through an SSH agent's socket
+fails because the socket is not reachable (`network.allowUnixSockets`). Each of those needs an unsandboxed retry that a person
+approves. That is the protection working, and it is also how approval fatigue
+starts: a sandbox that routinely blocks normal work teaches people to approve
+retries without reading them. Pre-allow the hosts a repository really needs
+(`network.allowedDomains`) rather than approving the same retry every day.
 
 **Does not stop:**
 
@@ -129,6 +147,13 @@ Code runs commands unsandboxed unless `failIfUnavailable` is `true`. Native
 Windows has no sandbox. `aie audit` reports a disabled sandbox
 (`sandbox-disabled`) but cannot see whether it actually started on a given
 machine.
+
+**In this repository:** `.ai/manifest.yaml` enables the sandbox and denies
+reads of `.env`, `.env.*`, `*.pem`, and `*.key`; the Codex target accepts both
+gaps, so CI stays on `--strict`, and `aie audit` reports no findings. It keeps
+the defaults for `allowUnsandboxedCommands` (retries allowed, with approval)
+and `failIfUnavailable` (unsandboxed if the sandbox cannot start), and
+pre-allows no network hosts.
 
 ## MCP servers
 
@@ -173,9 +198,11 @@ Each row is either a test in this repository or a citation above.
 | a commit with `Spec:` only in prose | CI trailer check | `test/trailer-ci.test.mjs` |
 | edit `.claude/hooks/spec-trailer.sh` with the edit tool | permissions (`protect-guardrails`) | `test/workflow.test.mjs` |
 | set `disableAllHooks` in `.claude/settings.local.json` with the edit tool | permissions (`protect-guardrails`) | `test/workflow.test.mjs` |
-| `sed -i` on `.claude/settings.json` | sandbox protected paths, when the sandbox is on; otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| `sed -i` on `.claude/settings.json` | sandbox protected paths, when the sandbox is on (it is in this repository); otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| write instructions into `.claude/agents/` or `.git/hooks/` from a shell | sandbox protected paths, when the sandbox is on; otherwise the permission prompt only | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | read `.env` with the Read tool | permissions, when a `Read` deny rule covers it; `aie audit` reports when none does | `test/audit.test.mjs` |
-| `cat .env` in a shell | sandbox, when on and a `Read` deny rule covers it; otherwise nothing | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| `cat .env` in a shell | sandbox, when on and a `Read` deny rule covers it (both are true in this repository); otherwise nothing | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
+| push to an arbitrary host from a shell | sandbox network proxy, when on: no host is allowed until someone approves it | [sandboxing](https://code.claude.com/docs/en/sandboxing) |
 | add a server to `.mcp.json` under `enableAllProjectMcpServers` | `aie audit` (`mcp-auto-approve`), in CI | `test/audit.test.mjs` |
 | hand-remove a compiled deny rule | `aie sync` refuses (`settings-entry-modified`) | `test/permissions.test.mjs` |
 | a deny rule that Codex silently ignores | `--strict` fails (`permissions-unsupported`) | `test/permissions.test.mjs` |

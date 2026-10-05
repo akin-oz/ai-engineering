@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- `docs/threat-model.md` covers accepted capability gaps (`accept-unused`),
+  what turning the sandbox on costs in practice (protected paths include
+  `.claude/agents/` and `.git/config`, and the network starts closed, so
+  routine git work needs approved unsandboxed retries), and this repository's
+  own configuration with the sandbox on.
+- Tests that create commits in temporary repositories disable commit signing,
+  so a contributor's signing setup (or a sandbox that blocks its agent) cannot
+  fail them.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
