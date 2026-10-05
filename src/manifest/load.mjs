@@ -13,7 +13,13 @@ import {
   reportUnusedHookScripts,
 } from "./sources.mjs";
 import { createFileMap, finalizeManifest, normalizeTargets } from "./normalize.mjs";
-import { combinePermissions, normalizePermissions, normalizeSandbox } from "./policy.mjs";
+import {
+  combinePermissions,
+  mergeSandbox,
+  normalizePermissions,
+  normalizeSandbox,
+  resolveSecurity,
+} from "./policy.mjs";
 
 const MANIFEST_VERSION = 1;
 
@@ -68,12 +74,13 @@ to initialize this repository.`);
 
   sources.hooks = await loadHooks(raw.hooks, sourceRoot, projectRoot, diagnostics, relativeManifest);
 
+  const security = resolveSecurity(raw.security, relativeManifest);
   const permissions = combinePermissions(
-    [normalizePermissions(raw.permissions, relativeManifest)],
+    [...(security ? [security.permissions] : []), normalizePermissions(raw.permissions, relativeManifest)],
     diagnostics,
     relativeManifest
   );
-  const sandbox = normalizeSandbox(raw.sandbox, relativeManifest);
+  const sandbox = mergeSandbox(security, normalizeSandbox(raw.sandbox, relativeManifest), relativeManifest);
 
   await reportUnlisted(names, files, projectRoot, diagnostics);
   await reportUnusedHookScripts(sources.hooks, files.hooks, projectRoot, diagnostics);

@@ -71,7 +71,7 @@ export async function run(argv, options = {}) {
 
 async function runInit(root, flags) {
   const { initializeWorkspace } = await import("../workspace/init.mjs");
-  const result = await initializeWorkspace(root, { blueprint: flags.blueprint });
+  const result = await initializeWorkspace(root, { blueprint: flags.blueprint, secure: flags.secure });
 
   if (flags.json) {
     console.log(JSON.stringify({ ok: true, created: result.created }, null, 2));
@@ -430,6 +430,7 @@ function parseArguments(argv) {
     force: false,
     dryRun: false,
     blueprint: false,
+    secure: false,
     write: false,
   };
   const positional = [];
@@ -446,6 +447,8 @@ function parseArguments(argv) {
       flags.dryRun = true;
     } else if (argument === "--blueprint") {
       flags.blueprint = true;
+    } else if (argument === "--secure") {
+      flags.secure = true;
     } else if (argument === "--write") {
       flags.write = true;
     } else if (argument.startsWith("-") && !isCommandAlias(argument)) {
@@ -485,6 +488,7 @@ Options:
   --force         Overwrite files the workspace does not own (sync)
   --dry-run       Report what sync would change without writing
   --blueprint     Initialize a workflow blueprint instead of a manifest (init)
+  --secure        Add the hardened security preset: deny secret reads, enable the sandbox (init)
   --write         Apply the adoption plan instead of previewing it (adopt)
   --json          Emit machine-readable output
 

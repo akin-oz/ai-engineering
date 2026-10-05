@@ -23,27 +23,19 @@ rules:
 
 commands: []
 
-# Secrets are never read by the agent's file tools. Bare names match at any
-# depth. With the sandbox on, the same rules also bind shell commands.
-permissions:
-  deny:
-    - Read(.env)
-    - Read(.env.*)
-    - Read(*.pem)
-    - Read(*.key)
+# The hardened preset denies the agent's file tools any read of .env, .env.*,
+# *.pem, and *.key, and runs shell commands inside Claude Code's OS sandbox,
+# where the same rules and the sandbox's protected paths (.claude settings and
+# hooks) bind cat, sed -i, cp, and the processes they start.
+security: hardened
 
-# Shell commands run inside Claude Code's OS sandbox, so Read deny rules and
-# the sandbox's protected paths (.claude settings and hooks) also hold for
-# cat, sed -i, cp, and the processes they start. Claude Code asks before a
-# command reaches any host not listed here.
-#
+# Claude Code asks before a sandboxed command reaches any host not listed here.
 # Only GitHub's API is pre-allowed, for gh. Git itself uses SSH through the
 # 1Password agent, which the sandbox cannot reach, so every fetch and push
 # needs an approved unsandboxed retry and a 1Password confirmation. That is
 # deliberate. The trade: a sandboxed command can still reach GitHub's API with
 # any token it holds. See docs/threat-model.md.
 sandbox:
-  enabled: true
   network:
     allowedDomains:
       - api.github.com

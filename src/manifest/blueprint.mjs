@@ -8,12 +8,18 @@ import { createDiagnostics, fail } from "../diagnostics.mjs";
 import { listMarkdown, readText } from "../filesystem.mjs";
 import { describeSource, loadHooks } from "./sources.mjs";
 import { createFileMap, finalizeManifest, normalizeTargets } from "./normalize.mjs";
-import { combinePermissions, normalizePermissions, normalizeSandbox } from "./policy.mjs";
+import {
+  combinePermissions,
+  mergeSandbox,
+  normalizePermissions,
+  normalizeSandbox,
+  resolveSecurity,
+} from "./policy.mjs";
 
 const BLUEPRINT_VERSION = 2;
 const PACKS = fileURLToPath(new URL("../../packs/", import.meta.url));
 
-const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai", "hooks", "permissions", "sandbox"]);
+const TOP_LEVEL = new Set(["schema", "project", "stack", "workflow", "ai", "hooks", "permissions", "sandbox", "security"]);
 const PROJECT_KEYS = new Set(["type"]);
 const STACK_KEYS = new Set(["language", "runtime"]);
 const WORKFLOW_KEYS = new Set(["development", "disable"]);
@@ -97,9 +103,14 @@ export async function loadBlueprint(root, options = {}) {
 
   sources.hooks = [...packHooks, ...localHooks];
 
-  // Pack groups first, so a rule's first declaration decides its position.
+  // Pack groups first, then the security preset, then the blueprint's own
+  // rules, so a rule's first declaration decides its position.
   const permissions = combinePermissions(
-    [...pack.permissions, normalizePermissions(blueprint.permissions, relative)],
+    [
+      ...pack.permissions,
+      ...(blueprint.security ? [blueprint.security.permissions] : []),
+      normalizePermissions(blueprint.permissions, relative),
+    ],
     diagnostics,
     relative
   );
@@ -133,7 +144,7 @@ export async function loadBlueprint(root, options = {}) {
       },
     },
     permissions,
-    sandbox: blueprint.sandbox,
+    sandbox: mergeSandbox(blueprint.security, blueprint.sandbox, relative),
   });
 }
 
@@ -261,6 +272,7 @@ function validateBlueprint(value, file) {
     hooks: value.hooks,
     permissions: value.permissions,
     sandbox: normalizeSandbox(value.sandbox, file),
+    security: resolveSecurity(value.security, file),
   };
 }
 
