@@ -12,6 +12,7 @@ import { fileExists, projectRoot } from "./helpers.mjs";
  */
 
 const THREAT_MODEL = path.join(projectRoot, "docs", "threat-model.md");
+const UPGRADING = path.join(projectRoot, "docs", "upgrading.md");
 
 async function sourceText() {
   const texts = [];
@@ -38,14 +39,16 @@ test("every test the threat model cites exists", async () => {
   }
 });
 
-test("every code and contribution the threat model names exists in the source", async () => {
-  const text = await fs.readFile(THREAT_MODEL, "utf8");
-  const source = await sourceText();
-  const names = [...new Set([...text.matchAll(/`([a-z]+(?:-[a-z]+)+)`/g)].map((match) => match[1]))];
+for (const [label, file] of [["threat model", THREAT_MODEL], ["upgrade guide", UPGRADING]]) {
+  test(`every code and contribution the ${label} names exists in the source`, async () => {
+    const text = await fs.readFile(file, "utf8");
+    const source = await sourceText();
+    const names = [...new Set([...text.matchAll(/`([a-z]+(?:-[a-z]+)+)`/g)].map((match) => match[1]))];
 
-  assert.ok(names.includes("permission-conflict"));
+    assert.ok(names.includes("permission-conflict"));
 
-  for (const name of names) {
-    assert.ok(source.includes(name), `\`${name}\` is named in the threat model but appears nowhere in src/ or packs/`);
-  }
-});
+    for (const name of names) {
+      assert.ok(source.includes(name), `\`${name}\` is named in the ${label} but appears nowhere in src/ or packs/`);
+    }
+  });
+}
