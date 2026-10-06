@@ -1,14 +1,23 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.1] - 2026-10-06
+
+A documentation release: no change to what the compiler generates.
 
 ### Changed
 
 - `docs/threat-model.md` has a section on the `security: hardened` preset: what
   it turns on, what the compiler guarantees about it, and what it does not
   cover (secrets under other names, the network, tools outside the sandbox,
-  machines where it cannot take effect). The sandbox section and attack table
+  machines where the sandbox cannot run). The sandbox section and attack table
   say where the preset turns the sandbox on.
+- The threat model and README describe `aie audit` precisely: it reads
+  `.claude/settings.json` as it is on disk, uncommitted edits included, and it
+  reports an empty deny list, a disabled sandbox, and uncovered secret files
+  rather than checking the preset's rules one by one.
+- The threat model and README no longer say that conflicting with the preset is
+  always an error: only a conflicting sandbox value is. Allowing a rule the
+  preset denies syncs with a `permission-conflict` warning, as it did in 0.6.0.
 
 ## [0.6.0] - 2026-10-05
 
