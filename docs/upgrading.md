@@ -32,9 +32,16 @@ and run `aie sync`. `.claude/settings.json` gains:
 
 - `Read` deny rules for `.env`, `.env.*`, `*.pem`, and `*.key`, so Claude's
   file tools cannot read those files;
-- `sandbox.enabled: true`, so Claude Code runs shell commands inside its OS
-  sandbox, where the same rules also stop `cat .env`, and the sandbox protects
-  the agent's own configuration from shell writes.
+- `sandbox.enabled: true`, which turns on Claude Code's OS sandbox for shell
+  commands. Inside it, the same rules also stop `cat .env`, and the sandbox
+  protects the agent's own configuration from shell writes.
+
+Those shell protections hold only while a command actually runs in the
+sandbox. Commands still run unsandboxed on native Windows, when the sandbox
+cannot start (set `sandbox.failIfUnavailable: true` to make Claude Code stop
+instead), and when someone approves retrying a failed command outside it (set
+`sandbox.allowUnsandboxedCommands: false` to turn those retries off). The
+[threat model](threat-model.md) has the details.
 
 Starting a new project instead? `aie init --secure` writes the preset for you.
 
@@ -85,8 +92,12 @@ case.
 - Entries you wrote by hand are kept, and the compiler never claims an entry
   that was already there.
 - A value you set that differs from the preset is kept too. If your file
-  already says `sandbox.enabled: false`, it stays false and every sync warns
-  with `settings-value-conflict` until you remove that line.
+  already said `sandbox.enabled: false` before you added the preset, it stays
+  false and every sync warns with `settings-value-conflict` until you remove
+  that line.
+- A value the compiler wrote and someone later changed by hand is different:
+  the sync stops with `settings-entry-modified` and writes nothing, until you
+  restore the value or remove it from `.ai/`.
 - Setting `sandbox.enabled: false` in `.ai/` next to the preset is an error.
 - Allowing a rule the preset denies, such as `Read(.env)`, syncs with a
   `permission-conflict` warning and leaves the rule denied.
