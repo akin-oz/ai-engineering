@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- `docs/threat-model.md` has a section on the `security: hardened` preset: what
+  it turns on, what the compiler guarantees about it, and what it does not
+  cover (secrets under other names, the network, tools outside the sandbox,
+  machines where it cannot take effect). The sandbox section and attack table
+  say where the preset turns the sandbox on.
+
 ## [0.6.0] - 2026-10-05
 
 ### Added

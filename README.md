@@ -125,8 +125,8 @@ not, and where it can be walked around is in the
 [threat model](docs/threat-model.md).
 
 `aie check` proves generated files match their source; `aie audit` asks whether
-that source describes a defended repository. It reads the committed
-`.claude/settings.json`, the hook scripts it runs, `.github/workflows/`, and the
+that source describes a defended repository. It reads the project's
+`.claude/settings.json` as it is on disk, the hook scripts it runs, `.github/workflows/`, and the
 names — never the contents — of files under the project root. It needs no
 `.ai/` workspace and writes nothing.
 
@@ -187,7 +187,7 @@ sandbox, so the same rules bind shell commands. Your own `permissions` and
 under `sandbox.network.allowedDomains`. Setting `sandbox.enabled: false`
 alongside the preset is an error rather than a silent override. The preset
 expands when you sync, so a release that improves it reaches your workspace on
-the next `aie sync`, and the changelog names every change.
+the next `aie sync`.
 
 `aie init --secure` starts a workspace with the preset and accepts the Codex
 gaps in the file, visibly, so the first sync passes `--strict` and
