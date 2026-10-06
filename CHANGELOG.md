@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.2] - 2026-10-06
+
+A documentation release: no change to what the compiler generates.
 
 ### Added
 
