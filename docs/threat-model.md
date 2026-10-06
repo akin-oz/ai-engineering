@@ -65,8 +65,8 @@ trust ([settings](https://code.claude.com/docs/en/settings)).
 - Anything in a runtime that has no permission system the compiler can write
   to (Codex, Cursor).
 
-**Known limits:** `aie audit` reads only the committed project file. User,
-local, and managed settings can make the effective policy stronger or weaker
+**Known limits:** `aie audit` reads only the project's `.claude/settings.json`,
+as it is on disk. User, local, and managed settings can make the effective policy stronger or weaker
 than what the repository shows.
 
 ## Hooks — `spec-trailer`
@@ -198,16 +198,18 @@ bind shell commands (`test/security.test.mjs`).
 - A workspace's own `permissions` and `sandbox` blocks still apply on top.
   Permission rules are unioned (pack groups, then the preset, then the
   workspace) and deny still wins (`permission-conflict`).
-- Contradicting the preset, such as `sandbox.enabled: false` next to it, is an
-  error rather than a silent override, so a reviewer never has to guess which
-  of two answers won.
+- A workspace sandbox value that conflicts with the preset, such as
+  `sandbox.enabled: false`, is an error rather than a silent override, so a
+  reviewer never has to guess which of two answers won. Allowing a rule the
+  preset denies, such as `Read(.env)`, is not an error: the sync succeeds,
+  drops the allow, and warns with `permission-conflict`.
 - The preset does not accept Codex or Cursor gaps on a project's behalf. Those
   targets still warn (`permissions-unsupported`, `sandbox-unsupported`) until
   someone accepts the gap. `aie init --secure` does accept them, in the
   generated file, with a comment, where a reviewer can see and remove it.
 - The preset expands at sync time. A release that changes it changes every
-  workspace that names it on the next `aie sync`, `aie check` reports the drift
-  until then, and the changelog names every change.
+  workspace that names it on the next `aie sync`, and `aie check` reports the
+  drift until then.
 
 **Does not cover:**
 
@@ -222,9 +224,12 @@ bind shell commands (`test/security.test.mjs`).
   fails to start and `failIfUnavailable` is not set, shell commands run
   unsandboxed and only the file-tool `Read` rules still hold.
 
-**Known limits:** `aie audit` reads the committed settings, so it reports when
-the preset's rules are missing there; it cannot confirm that a given session's
-sandbox actually started.
+**Known limits:** `aie audit` reads `.claude/settings.json` as it is on disk in
+the directory it is run in, uncommitted edits included. It does not check the
+preset's four rules one by one: it reports an empty `permissions.deny`, a
+sandbox that is not enabled, and any secret-looking file present on disk that
+no `Read` deny rule covers. It cannot confirm that a given session's sandbox
+actually started.
 
 ## MCP servers
 
