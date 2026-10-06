@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `docs/upgrading.md`: how a project already on the package upgrades and opts
+  into each change since 0.2.0, linked from the README. The docs test checks
+  that every code it names still exists.
+
 ## [0.6.1] - 2026-10-06
 
 A documentation release: no change to what the compiler generates.

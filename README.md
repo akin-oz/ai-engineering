@@ -34,6 +34,8 @@ npx aie init
 npx aie sync
 ```
 
+Already using it? [Upgrading](docs/upgrading.md) covers what changed and how to opt in.
+
 `aie init` creates a `.ai/` workspace with a starter rule, without overwriting
 anything. `aie sync` compiles it:
 
@@ -246,7 +248,8 @@ is empty.
 
 ## Documentation
 
-- [docs/](docs) — shipped behavior: [architecture](docs/architecture.md),
+- [docs/](docs) — shipped behavior: [upgrading](docs/upgrading.md),
+  [threat model](docs/threat-model.md), [architecture](docs/architecture.md),
   [public API](docs/api.md), [adapter contract](docs/adapter-api.md),
   [writing an adapter](docs/writing-an-adapter.md),
   [comparisons](docs/comparison.md)
